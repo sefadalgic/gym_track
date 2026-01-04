@@ -1,10 +1,10 @@
 /// HTTP request method types
 enum HttpRequestTypes {
-  GET,
-  POST,
-  PUT,
-  DELETE,
-  PATCH,
+  get,
+  post,
+  put,
+  delete,
+  patch,
 }
 
 /// Extension for HttpRequestTypes enum
@@ -12,15 +12,15 @@ extension HttpRequestTypesExtension on HttpRequestTypes {
   /// Convert enum to string value for Dio
   String get value {
     switch (this) {
-      case HttpRequestTypes.GET:
+      case HttpRequestTypes.get:
         return 'GET';
-      case HttpRequestTypes.POST:
+      case HttpRequestTypes.post:
         return 'POST';
-      case HttpRequestTypes.PUT:
+      case HttpRequestTypes.put:
         return 'PUT';
-      case HttpRequestTypes.DELETE:
+      case HttpRequestTypes.delete:
         return 'DELETE';
-      case HttpRequestTypes.PATCH:
+      case HttpRequestTypes.patch:
         return 'PATCH';
     }
   }
