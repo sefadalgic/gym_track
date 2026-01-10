@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:gym_track/core/constants/app/app_constants.dart';
 import 'package:gym_track/core/network/i_network_service.dart';
 import 'package:gym_track/core/network/network_service.dart';
 
@@ -14,25 +15,18 @@ import 'package:gym_track/core/network/network_service.dart';
 /// );
 /// ```
 class NetworkManager {
-  // Singleton instance
   static NetworkManager? _instance;
 
-  // Dio instance
   late final Dio _dio;
 
-  // Network service
   late final INetworkService networkService;
 
-  // Private constructor
   NetworkManager._init({
-    String? baseUrl,
     Duration? connectTimeout,
     Duration? receiveTimeout,
   }) {
-    // Configure Dio
     final baseOptions = BaseOptions(
-      baseUrl: baseUrl ??
-          'https://api.example.com/', // TODO: Update with your API base URL
+      baseUrl: AppConstants.LOCAL_URL,
       connectTimeout: connectTimeout ?? const Duration(seconds: 30),
       receiveTimeout: receiveTimeout ?? const Duration(seconds: 30),
       headers: {
@@ -43,7 +37,6 @@ class NetworkManager {
 
     _dio = Dio(baseOptions);
 
-    // Add interceptors
     _dio.interceptors.add(
       LogInterceptor(
         requestBody: true,
@@ -58,35 +51,13 @@ class NetworkManager {
       ),
     );
 
-    // You can add more interceptors here
-    // Example: Authentication interceptor
-    // _dio.interceptors.add(AuthInterceptor());
-
-    // Initialize network service
     networkService = NetworkService(_dio);
   }
 
-  /// Get singleton instance
   static NetworkManager get instance {
     _instance ??= NetworkManager._init();
     return _instance!;
   }
 
-  /// Initialize with custom configuration
-  ///
-  /// Call this method once at app startup if you need custom configuration
-  static void initialize({
-    required String baseUrl,
-    Duration? connectTimeout,
-    Duration? receiveTimeout,
-  }) {
-    _instance = NetworkManager._init(
-      baseUrl: baseUrl,
-      connectTimeout: connectTimeout,
-      receiveTimeout: receiveTimeout,
-    );
-  }
-
-  /// Get Dio instance for advanced usage
   Dio get dio => _dio;
 }
