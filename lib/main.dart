@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gym_track/feature/exercices/view/exercises_view.dart';
 
 void main() {
   runApp(const MyApp());
@@ -10,15 +11,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Material App',
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Gym Track'),
-        ),
-        body: const Center(
-          child: Text('Gym Track'),
-        ),
+      title: 'Gym Track',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
       ),
+      home: const ExercisesView(),
     );
   }
 }
