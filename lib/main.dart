@@ -1,7 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:gym_track/feature/main/main_view.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-void main() {
+//TODO Firebase configuration for IOS
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp();
+  
+  // Configure Firestore for aggressive caching
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+  
   runApp(const MyApp());
 }
 

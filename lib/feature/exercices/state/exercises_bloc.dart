@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gym_track/core/network/network_manager.dart';
 import 'package:gym_track/feature/exercices/state/exercises_event.dart';

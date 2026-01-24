@@ -109,4 +109,24 @@ class ExerciseModel {
     data['dateUpdated'] = dateUpdated;
     return data;
   }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'id': id,
+      'name': name,
+      'category': category,
+      'primaryMuscles': primaryMuscles?.map((e) => e.toJson()).toList(),
+      'secondaryMuscles': secondaryMuscles?.map((e) => e.toJson()).toList(),
+      'equipment': equipment,
+      'level': level,
+      'force': force,
+      'mechanic': mechanic,
+      'aliases': aliases,
+      'instructions': instructions,
+      'description': description,
+      'tips': tips,
+      'dateCreated': dateCreated,
+      'dateUpdated': dateUpdated,
+    };
+  }
 }
