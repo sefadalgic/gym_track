@@ -1,16 +1,15 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gym_track/core/network/network_manager.dart';
 import 'package:gym_track/feature/exercices/state/exercises_event.dart';
 import 'package:gym_track/feature/exercices/state/exercises_state.dart';
 import 'package:gym_track/product/model/exercise_model.dart';
+import 'package:gym_track/product/service/firestore_service.dart';
 
 /// BLoC for managing exercises state
 class ExercisesBloc extends Bloc<ExercisesEvent, ExercisesState> {
-  final NetworkManager _networkManager;
+  final FirestoreService _firestoreService;
 
-  ExercisesBloc({NetworkManager? networkManager})
-      : _networkManager = networkManager ?? NetworkManager.instance,
+  ExercisesBloc({FirestoreService? firestoreService})
+      : _firestoreService = firestoreService ?? FirestoreService.instance,
         super(const ExercisesState()) {
     on<ExercisesLoadRequested>(_onLoadRequested);
     on<ExercisesRefreshRequested>(_onRefreshRequested);
@@ -18,36 +17,21 @@ class ExercisesBloc extends Bloc<ExercisesEvent, ExercisesState> {
     on<ExerciseSelected>(_onExerciseSelected);
   }
 
-  /// Handle loading exercises from API
+  /// Handle loading exercises from Firestore
   Future<void> _onLoadRequested(
     ExercisesLoadRequested event,
-    Emitter<ExercisesState> emit,
+  Emitter<ExercisesState> emit,
   ) async {
     emit(state.copyWith(isLoading: true, clearError: true));
 
     try {
-      final response = await _networkManager.networkService.get(
-        path: '/api/exercises',
-      );
+      final exercises = await _firestoreService.getExercises();
 
-      if (response.data != null) {
-        final responseData = response.data as Map<String, dynamic>;
-        final List<dynamic> exercisesJson = responseData['data'];
-        final exercises = exercisesJson
-            .map((json) => ExerciseModel.fromJson(json as Map<String, dynamic>))
-            .toList();
-
-        emit(state.copyWith(
-          exercises: exercises,
-          isLoading: false,
-          clearError: true,
-        ));
-      } else {
-        emit(state.copyWith(
-          isLoading: false,
-          error: 'No data received from server',
-        ));
-      }
+      emit(state.copyWith(
+        exercises: exercises,
+        isLoading: false,
+        clearError: true,
+      ));
     } catch (e) {
       emit(state.copyWith(
         isLoading: false,

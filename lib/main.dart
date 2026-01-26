@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:gym_track/feature/login/login_view.dart';
 import 'package:gym_track/feature/main/main_view.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:gym_track/feature/signup/signup_view.dart';
 
 //TODO Firebase configuration for IOS
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
   await Firebase.initializeApp();
-  
+
   // Configure Firestore for aggressive caching
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
-  
+
   runApp(const MyApp());
 }
 
@@ -32,7 +34,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const MainView(),
+      home: SignUpView(),
     );
   }
 }
