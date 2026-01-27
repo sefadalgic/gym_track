@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:gym_track/core/constants/navigation/navigation_constants.dart';
 import 'package:gym_track/feature/login/theme/login_theme.dart';
 import 'package:gym_track/feature/signup/signup_view.dart';
 
@@ -426,11 +428,7 @@ class _LoginViewState extends State<LoginView>
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const SignUpView(),
-                ),
-              );
+              context.push(NavigationConstants.signup);
             },
             style: TextButton.styleFrom(
               padding: EdgeInsets.zero,

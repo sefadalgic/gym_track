@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:gym_track/feature/login/theme/login_theme.dart';
 
 class SignUpView extends StatefulWidget {
@@ -85,6 +86,17 @@ class _SignUpViewState extends State<SignUpView>
             await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Sign Up Successfully'),
+            backgroundColor: LoginTheme.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
         );
       } on FirebaseAuthException catch (e) {
         if (e.code == 'weak-password') {
@@ -401,16 +413,6 @@ class _SignUpViewState extends State<SignUpView>
               if (value == null || value.isEmpty) {
                 return 'Please enter your password';
               }
-              if (value.length < 8) {
-                return 'Password must be at least 8 characters';
-              }
-              if (!value.contains(RegExp(r'[A-Z]'))) {
-                return 'Password must contain at least one uppercase letter';
-              }
-              if (!value.contains(RegExp(r'[0-9]'))) {
-                return 'Password must contain at least one number';
-              }
-              return null;
             },
           ),
         ),
@@ -679,7 +681,7 @@ class _SignUpViewState extends State<SignUpView>
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              context.pop();
             },
             style: TextButton.styleFrom(
               padding: EdgeInsets.zero,

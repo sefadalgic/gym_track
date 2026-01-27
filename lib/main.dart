@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:gym_track/feature/login/login_view.dart';
-import 'package:gym_track/feature/main/main_view.dart';
+import 'package:gym_track/core/constants/app/app_constants.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:gym_track/feature/signup/signup_view.dart';
+import 'package:gym_track/product/routes/go_routes.dart';
+import 'firebase_options.dart';
 
 //TODO Firebase configuration for IOS
 
@@ -11,7 +11,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Configure Firestore for aggressive caching
   FirebaseFirestore.instance.settings = const Settings(
@@ -27,14 +29,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Gym Track',
+    return MaterialApp.router(
+      routerConfig: goRouter,
+      title: AppConstants.APP_NAME,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: SignUpView(),
     );
   }
 }
