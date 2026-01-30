@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gym_track/core/cache/cache_manager.dart';
 import 'package:gym_track/core/constants/app/app_constants.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,6 +15,12 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Register Hive type adapters
+  CacheManager.instance.registerAdapters();
+
+  // Initialize cache manager
+  await CacheManager.instance.init();
 
   // Configure Firestore for aggressive caching
   FirebaseFirestore.instance.settings = const Settings(

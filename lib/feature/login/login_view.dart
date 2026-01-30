@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gym_track/core/constants/navigation/navigation_constants.dart';
@@ -63,7 +66,50 @@ class _LoginViewState extends State<LoginView>
       setState(() => _isLoading = true);
 
       // TODO: Implement actual login logic
-      await Future.delayed(const Duration(seconds: 2));
+      try {
+        final credential = await FirebaseAuth.instance
+            .signInWithEmailAndPassword(
+                email: _emailController.text,
+                password: _passwordController.text);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('welcome back ${credential.user?.displayName ?? ""}'),
+            backgroundColor: LoginTheme.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+
+        context.push(NavigationConstants.main);
+      } on FirebaseAuthException catch (e) {
+        debugPrint('ErrorCode on Firebase Login: ${e.code}');
+        if (e.code == 'user-not-found') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('No user found for that email.'),
+              backgroundColor: LoginTheme.error,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        } else if (e.code == 'wrong-password') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Wrong password provided for that user.'),
+              backgroundColor: LoginTheme.error,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
+      }
 
       setState(() => _isLoading = false);
 
