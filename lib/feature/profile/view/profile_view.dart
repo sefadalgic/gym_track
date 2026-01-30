@@ -27,6 +27,7 @@ class _ProfileViewState extends State<ProfileView> {
   @override
   void initState() {
     super.initState();
+    print('Profile View Runned !');
     _loadMockData();
   }
 

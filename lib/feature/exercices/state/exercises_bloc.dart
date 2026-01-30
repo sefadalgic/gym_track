@@ -38,6 +38,7 @@ class ExercisesBloc extends Bloc<ExercisesEvent, ExercisesState> {
       if (cachedExercises != null && cachedExercises.isNotEmpty) {
         // Cache hit! Show immediately and return
         // No Firebase call = No cost 💰
+        print('Get exercises from cache');
         emit(state.copyWith(
           exercises: cachedExercises,
           isLoading: false,

@@ -26,6 +26,20 @@ class _WorkoutsViewState extends State<WorkoutsView>
 
   @override
   Widget build(BuildContext context) {
+    // TODO: Replace this with actual state management
+    final bool hasActivePlan = false; // This should come from your state/bloc
+
+    // Show empty state without tabs when no active plan
+    if (!hasActivePlan) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Workouts'),
+        ),
+        body: _buildEmptyPlanState(),
+      );
+    }
+
+    // Show normal tab view when there's an active plan
     return Scaffold(
       appBar: AppBar(
         title: const Text('Workouts'),
@@ -99,6 +113,284 @@ class _WorkoutsViewState extends State<WorkoutsView>
         const SizedBox(height: 12),
         _buildAddWorkoutDayCard(context),
       ],
+    );
+  }
+
+  /// Empty state when no active plan exists - Modern dark theme design
+  Widget _buildEmptyPlanState() {
+    const Color background = Color(0xFF0A0E14);
+    const Color surface = Color(0xFF151A21);
+    const Color surfaceHighlight = Color(0xFF1E252E);
+    const Color primary = Color(0xFF00D9FF);
+    const Color textPrimary = Color(0xFFFFFFFF);
+    const Color textSecondary = Color(0xFF8A8F98);
+
+    return Container(
+      color: background,
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Premium Icon with Glow Effect
+              Container(
+                padding: const EdgeInsets.all(40),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF00D9FF),
+                      Color(0xFF00B8D4),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primary.withValues(alpha: 0.4),
+                      blurRadius: 30,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.calendar_month_rounded,
+                  size: 64,
+                  color: Color(0xFF0A0E14),
+                ),
+              ),
+              const SizedBox(height: 40),
+
+              // Title with gradient text effect
+              ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [Color(0xFF00D9FF), Color(0xFF00B8D4)],
+                ).createShader(bounds),
+                child: const Text(
+                  'Henüz Aktif Planınız Yok',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Description
+              const Text(
+                'Hedeflerinize ulaşmak için kişiselleştirilmiş\nbir antrenman planı oluşturun',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: textSecondary,
+                  height: 1.6,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 48),
+
+              // Feature Cards with Modern Design
+              _buildModernFeatureCard(
+                Icons.fitness_center_rounded,
+                'Kişiselleştirilmiş Program',
+                'Size özel antrenman programı oluşturun',
+                const Color(0xFF00D9FF),
+                surface,
+                surfaceHighlight,
+                textPrimary,
+                textSecondary,
+              ),
+              const SizedBox(height: 16),
+              _buildModernFeatureCard(
+                Icons.calendar_today_rounded,
+                'Haftalık Takip',
+                'Antrenmanlarınızı haftalık olarak planlayın',
+                const Color(0xFF00FF88),
+                surface,
+                surfaceHighlight,
+                textPrimary,
+                textSecondary,
+              ),
+              const SizedBox(height: 16),
+              _buildModernFeatureCard(
+                Icons.trending_up_rounded,
+                'İlerleme Kaydı',
+                'Gelişiminizi takip edin ve hedeflerinize ulaşın',
+                const Color(0xFFFFB800),
+                surface,
+                surfaceHighlight,
+                textPrimary,
+                textSecondary,
+              ),
+              const SizedBox(height: 48),
+
+              // Premium Create Button
+              Container(
+                width: double.infinity,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF00D9FF), Color(0xFF00B8D4)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primary.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _createWeeklyPlan(context),
+                    borderRadius: BorderRadius.circular(16),
+                    child: const Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.add_circle_outline_rounded,
+                            color: Color(0xFF0A0E14),
+                            size: 24,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'Yeni Plan Oluştur',
+                            style: TextStyle(
+                              color: Color(0xFF0A0E14),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Secondary Action
+              TextButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Örnek planlar yakında eklenecek...'),
+                      backgroundColor: surfaceHighlight,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                icon: const Icon(
+                  Icons.lightbulb_outline_rounded,
+                  color: primary,
+                  size: 20,
+                ),
+                label: const Text(
+                  'Örnek Planları Görüntüle',
+                  style: TextStyle(
+                    color: primary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Modern feature card with dark theme
+  Widget _buildModernFeatureCard(
+    IconData icon,
+    String title,
+    String description,
+    Color accentColor,
+    Color surface,
+    Color surfaceHighlight,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF151A21),
+            Color(0xFF12161C),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: surfaceHighlight,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Icon Container
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: accentColor.withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: accentColor,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Text Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -760,6 +1052,7 @@ class _WeeklyPlanDialogState extends State<_WeeklyPlanDialog> {
                     const SizedBox(width: 12),
                     ElevatedButton.icon(
                       onPressed: () {
+                        return;
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
