@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gym_track/feature/workouts/view/create_workout_flow.dart';
 
 /// Workouts view page for creating weekly workout plans
 class WorkoutsView extends StatefulWidget {
@@ -718,10 +719,20 @@ class _WorkoutsViewState extends State<WorkoutsView>
   }
 
   void _createWeeklyPlan(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => _WeeklyPlanDialog(),
-    );
+    Navigator.of(context)
+        .push(
+      MaterialPageRoute(
+        builder: (context) => const CreateWorkoutFlow(),
+      ),
+    )
+        .then((result) {
+      // Refresh workout list if a plan was created
+      if (result == true) {
+        setState(() {
+          // Trigger rebuild to check for active workout
+        });
+      }
+    });
   }
 
   void _editWeeklyPlan(BuildContext context) {
