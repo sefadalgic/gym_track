@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gym_track/feature/workouts/view/create_workout_flow.dart';
+import 'package:gym_track/product/model/workout_model.dart';
+import 'package:gym_track/product/service/firestore_service.dart';
 
 /// Workouts view page for creating weekly workout plans
 class WorkoutsView extends StatefulWidget {
@@ -13,10 +15,41 @@ class _WorkoutsViewState extends State<WorkoutsView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  // Firestore service
+  final FirestoreService _firestoreService = FirestoreService.instance;
+
+  // Active workout state
+  WorkoutModel? _activeWorkout;
+  bool _isLoading = true;
+  String? _error;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadActiveWorkout();
+  }
+
+  Future<void> _loadActiveWorkout() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final workout = await _firestoreService.getActiveWorkout();
+
+      setState(() {
+        _activeWorkout = workout;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+      print('Error loading active workout: $e');
+    }
   }
 
   @override
@@ -27,11 +60,20 @@ class _WorkoutsViewState extends State<WorkoutsView>
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Replace this with actual state management
-    final bool hasActivePlan = false; // This should come from your state/bloc
+    // Show loading indicator while fetching data
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Workouts'),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
-    // Show empty state without tabs when no active plan
-    if (!hasActivePlan) {
+    // Show empty state when no active plan
+    if (_activeWorkout == null) {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Workouts'),
@@ -42,10 +84,23 @@ class _WorkoutsViewState extends State<WorkoutsView>
 
     // Show normal tab view when there's an active plan
     return Scaffold(
+      backgroundColor: const Color(0xFF0A0E14), // Dark theme background
       appBar: AppBar(
-        title: const Text('Workouts'),
+        backgroundColor: const Color(0xFF0A0E14),
+        title: const Text(
+          'Workouts',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFFFFFFFF),
+          ),
+        ),
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: const Color(0xFF00D9FF),
+          labelColor: const Color(0xFF00D9FF),
+          unselectedLabelColor: const Color(0xFF8A8F98),
           tabs: const [
             Tab(text: 'My Plan', icon: Icon(Icons.calendar_today)),
             Tab(text: 'History', icon: Icon(Icons.history)),
@@ -62,59 +117,379 @@ class _WorkoutsViewState extends State<WorkoutsView>
       floatingActionButton: _tabController.index == 0
           ? FloatingActionButton.extended(
               onPressed: () => _createWeeklyPlan(context),
-              icon: const Icon(Icons.add),
-              label: const Text('New Plan'),
+              backgroundColor: const Color(0xFF00D9FF),
+              icon: const Icon(Icons.add, color: Color(0xFF0A0E14)),
+              label: const Text(
+                'New Plan',
+                style: TextStyle(color: Color(0xFF0A0E14)),
+              ),
             )
           : null,
     );
   }
 
-  /// My Plan tab - shows weekly workout plan
+  /// My Plan tab - shows weekly workout plan with modern dark theme
   Widget _buildMyPlanTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildWeeklyPlanHeader(context),
-        const SizedBox(height: 16),
-        _buildWeeklyPlanCard(context),
-        const SizedBox(height: 24),
-        Text(
-          'Workout Days',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+    if (_activeWorkout == null) {
+      return const Center(
+        child: Text('No active workout', style: TextStyle(color: Colors.grey)),
+      );
+    }
+
+    final workout = _activeWorkout!;
+    final sortedDays = workout.selectedDays.toList()
+      ..sort((a, b) => a.index.compareTo(b.index));
+
+    // Modern dark theme colors
+    const Color background = Color(0xFF0A0E14);
+    const Color surface = Color(0xFF151A21);
+    const Color surfaceHighlight = Color(0xFF1E252E);
+    const Color primary = Color(0xFF00D9FF);
+    const Color textPrimary = Color(0xFFFFFFFF);
+    const Color textSecondary = Color(0xFF8A8F98);
+
+    return Container(
+      color: background,
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          // Workout Header Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF151A21), Color(0xFF12161C)],
               ),
-        ),
-        const SizedBox(height: 12),
-        _buildWorkoutDayCard(
-          context,
-          'Monday',
-          'Push Day',
-          '8 exercises',
-          Icons.fitness_center,
-          Colors.blue,
-        ),
-        const SizedBox(height: 12),
-        _buildWorkoutDayCard(
-          context,
-          'Wednesday',
-          'Pull Day',
-          '7 exercises',
-          Icons.accessibility_new,
-          Colors.green,
-        ),
-        const SizedBox(height: 12),
-        _buildWorkoutDayCard(
-          context,
-          'Friday',
-          'Leg Day',
-          '6 exercises',
-          Icons.directions_run,
-          Colors.orange,
-        ),
-        const SizedBox(height: 12),
-        _buildAddWorkoutDayCard(context),
-      ],
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: surfaceHighlight),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF00D9FF), Color(0xFF00B8D4)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primary.withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            spreadRadius: 0,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.fitness_center,
+                        color: Color(0xFF0A0E14),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            workout.name ?? 'Unnamed Workout',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Active Plan',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, color: primary),
+                      onPressed: () {
+                        // TODO: Implement edit
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Stats Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatChip(
+                        icon: Icons.calendar_today,
+                        label: 'Days',
+                        value: '${workout.trainingDays}',
+                        color: primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatChip(
+                        icon: Icons.fitness_center,
+                        label: 'Exercises',
+                        value: '${workout.totalExercises}',
+                        color: primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Section Header
+          const Text(
+            'Training Days',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: textPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Display each day's exercises
+          ...sortedDays.map((day) {
+            final exercises = workout.exercises?[day] ?? [];
+            if (exercises.isEmpty) return const SizedBox.shrink();
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildModernDayCard(
+                _getDayName(day),
+                exercises,
+                primary,
+                surface,
+                surfaceHighlight,
+                textPrimary,
+                textSecondary,
+              ),
+            );
+          }),
+        ],
+      ),
     );
+  }
+
+  Widget _buildStatChip({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E252E),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFFFFFFF),
+                ),
+              ),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF8A8F98),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernDayCard(
+    String dayName,
+    List exercises,
+    Color primary,
+    Color surface,
+    Color surfaceHighlight,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF151A21), Color(0xFF12161C)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: surfaceHighlight),
+      ),
+      child: Theme(
+        data: ThemeData(
+          dividerColor: Colors.transparent,
+          splashColor: primary.withValues(alpha: 0.1),
+          highlightColor: primary.withValues(alpha: 0.05),
+        ),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: const EdgeInsets.only(bottom: 12),
+          leading: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: primary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: primary.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Icon(
+              Icons.fitness_center,
+              color: primary,
+              size: 20,
+            ),
+          ),
+          title: Text(
+            dayName,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFFFFFFF),
+            ),
+          ),
+          subtitle: Text(
+            '${exercises.length} exercises',
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF8A8F98),
+            ),
+          ),
+          iconColor: primary,
+          collapsedIconColor: textSecondary,
+          children: [
+            ...exercises.asMap().entries.map((entry) {
+              final index = entry.key;
+              final exercise = entry.value;
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: surfaceHighlight,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: primary.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${index + 1}',
+                          style: TextStyle(
+                            color: primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        exercise.name ?? 'Unknown',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFFFFFFFF),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            primary.withValues(alpha: 0.2),
+                            primary.withValues(alpha: 0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: primary.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        '${exercise.sets}×${exercise.reps}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getDayName(dynamic day) {
+    final dayStr = day.toString().split('.').last;
+    switch (dayStr) {
+      case 'monday':
+        return 'Pazartesi';
+      case 'tuesday':
+        return 'Salı';
+      case 'wednesday':
+        return 'Çarşamba';
+      case 'thursday':
+        return 'Perşembe';
+      case 'friday':
+        return 'Cuma';
+      case 'saturday':
+        return 'Cumartesi';
+      case 'sunday':
+        return 'Pazar';
+      default:
+        return dayStr;
+    }
   }
 
   /// Empty state when no active plan exists - Modern dark theme design
@@ -601,36 +976,40 @@ class _WorkoutsViewState extends State<WorkoutsView>
 
   /// History tab - shows past workouts
   Widget _buildHistoryTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildHistoryCard(
-          context,
-          'Push Day',
-          'Today, 10:30 AM',
-          '45 min',
-          '12 sets',
-          true,
+    const Color background = Color(0xFF0A0E14);
+    const Color textSecondary = Color(0xFF8A8F98);
+
+    return Container(
+      color: background,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.history,
+              size: 64,
+              color: textSecondary.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Workout History',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFFFFFFF),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Coming soon...',
+              style: TextStyle(
+                fontSize: 14,
+                color: textSecondary,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        _buildHistoryCard(
-          context,
-          'Leg Day',
-          'Yesterday, 6:00 PM',
-          '60 min',
-          '15 sets',
-          false,
-        ),
-        const SizedBox(height: 12),
-        _buildHistoryCard(
-          context,
-          'Pull Day',
-          'Jan 15, 2026',
-          '50 min',
-          '14 sets',
-          false,
-        ),
-      ],
+      ),
     );
   }
 
@@ -728,9 +1107,7 @@ class _WorkoutsViewState extends State<WorkoutsView>
         .then((result) {
       // Refresh workout list if a plan was created
       if (result == true) {
-        setState(() {
-          // Trigger rebuild to check for active workout
-        });
+        _loadActiveWorkout(); // Reload the active workout
       }
     });
   }
