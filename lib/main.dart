@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:gym_track/core/cache/cache_manager.dart';
 import 'package:gym_track/core/constants/app/app_constants.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gym_track/product/routes/go_routes.dart';
 import 'firebase_options.dart';
@@ -15,6 +18,12 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Configure Firebase Auth persistence for web
+  // This ensures the user session persists across browser restarts
+  if (!(Platform.isAndroid || Platform.isIOS)) {
+    await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+  }
 
   // Register Hive type adapters
   CacheManager.instance.registerAdapters();

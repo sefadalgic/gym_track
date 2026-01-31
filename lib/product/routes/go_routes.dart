@@ -4,8 +4,9 @@ import 'package:gym_track/core/constants/navigation/navigation_constants.dart';
 import 'package:gym_track/feature/login/login_view.dart';
 import 'package:gym_track/feature/main/main_view.dart';
 import 'package:gym_track/feature/signup/signup_view.dart';
+import 'package:gym_track/feature/splash/view/splash_view.dart';
 
-final goRouter = GoRouter(initialLocation: NavigationConstants.login, routes: [
+final goRouter = GoRouter(initialLocation: NavigationConstants.splash, routes: [
   GoRoute(
     path: '/',
     builder: (BuildContext context, GoRouterState state) {
@@ -14,6 +15,12 @@ final goRouter = GoRouter(initialLocation: NavigationConstants.login, routes: [
           child: Text('Home'),
         ),
       );
+    },
+  ),
+  GoRoute(
+    path: NavigationConstants.splash,
+    builder: (BuildContext context, GoRouterState state) {
+      return const SplashView();
     },
   ),
   GoRoute(
