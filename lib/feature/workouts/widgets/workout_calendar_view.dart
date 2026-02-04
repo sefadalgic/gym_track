@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:gym_track/core/constants/enums/days.dart';
 import 'package:gym_track/product/model/workout_model.dart';
+import 'package:gym_track/product/model/workout_session_model.dart';
+import 'package:gym_track/product/model/workout_session_exercise_model.dart';
+import 'package:gym_track/product/service/firestore_service.dart';
+import 'package:gym_track/feature/workouts/view/workout_session_screen.dart';
 
 /// Modern calendar view for displaying workout plans
 class WorkoutCalendarView extends StatefulWidget {
@@ -32,6 +36,35 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
     super.initState();
     _currentMonth = DateTime.now();
     _selectedDate = DateTime.now();
+    _checkActiveSession();
+  }
+
+  // Firestore service
+  final FirestoreService _firestoreService = FirestoreService.instance;
+  WorkoutSessionModel? _activeSession;
+  bool _isCheckingSession = false;
+
+  /// Check if there's an active session for the selected date
+  Future<void> _checkActiveSession() async {
+    if (_selectedDate == null) return;
+
+    setState(() {
+      _isCheckingSession = true;
+    });
+
+    try {
+      final sessions =
+          await _firestoreService.getWorkoutSessionsForDate(_selectedDate!);
+      setState(() {
+        _activeSession = sessions.isNotEmpty ? sessions.first : null;
+        _isCheckingSession = false;
+      });
+    } catch (e) {
+      print('Error checking active session: $e');
+      setState(() {
+        _isCheckingSession = false;
+      });
+    }
   }
 
   @override
@@ -202,6 +235,7 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
         setState(() {
           _selectedDate = date;
         });
+        _checkActiveSession();
       },
       child: Container(
         decoration: BoxDecoration(
@@ -329,7 +363,26 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
                           color: textPrimary,
                         ),
                       ),
-                      if (exercises.isNotEmpty)
+                      if (_activeSession != null && _activeSession!.isCompleted)
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.check_circle,
+                              color: Color(0xFF00FF88),
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Tamamlandı • ${_activeSession!.totalCompletedSets} set',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF00FF88),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        )
+                      else if (exercises.isNotEmpty)
                         Text(
                           '${exercises.length} egzersiz',
                           style: const TextStyle(
@@ -343,6 +396,51 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
               ],
             ),
           ),
+          // Start Workout Button (only show if there are exercises)
+          if (exercises.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: _isCheckingSession
+                  ? const Center(child: CircularProgressIndicator())
+                  : SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: () => _startOrContinueWorkout(exercises),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primary,
+                          foregroundColor: const Color(0xFF0A0E14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _activeSession != null &&
+                                      !_activeSession!.isCompleted
+                                  ? Icons.play_arrow_rounded
+                                  : Icons.fitness_center_rounded,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _activeSession != null &&
+                                      !_activeSession!.isCompleted
+                                  ? 'Antrenmana Devam Et'
+                                  : 'Antrenmana Başla',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
           // Exercise list
           Expanded(
             child: exercises.isEmpty
@@ -369,87 +467,296 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
                       ),
                     ),
                   )
-                : ListView.builder(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: exercises.length,
-                    itemBuilder: (context, index) {
-                      final exercise = exercises[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: surfaceHighlight,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: primary.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
+                : _activeSession != null && _activeSession!.isCompleted
+                    // Show completed session data
+                    ? _buildCompletedSessionList()
+                    // Show planned exercises
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        itemCount: exercises.length,
+                        itemBuilder: (context, index) {
+                          final exercise = exercises[index];
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: surfaceHighlight,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
                                 color: primary.withValues(alpha: 0.2),
-                                shape: BoxShape.circle,
                               ),
-                              child: Center(
-                                child: Text(
-                                  '${index + 1}',
-                                  style: const TextStyle(
-                                    color: primary,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: primary.withValues(alpha: 0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${index + 1}',
+                                      style: const TextStyle(
+                                        color: primary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    exercise.name ?? 'Bilinmeyen Egzersiz',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: textPrimary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        primary.withValues(alpha: 0.2),
+                                        primary.withValues(alpha: 0.1),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: primary.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '${exercise.sets}×${exercise.reps}',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                exercise.name ?? 'Bilinmeyen Egzersiz',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: textPrimary,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    primary.withValues(alpha: 0.2),
-                                    primary.withValues(alpha: 0.1),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: primary.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              child: Text(
-                                '${exercise.sets}×${exercise.reps}',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: primary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),
+    );
+  }
+
+  /// Build completed session list with actual data
+  Widget _buildCompletedSessionList() {
+    if (_activeSession == null) return const SizedBox.shrink();
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: _activeSession!.exercises.length,
+      itemBuilder: (context, index) {
+        final exercise = _activeSession!.exercises[index];
+        final completedSets =
+            exercise.completedSets.where((s) => s.isCompleted).toList();
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF151A21), Color(0xFF12161C)],
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: surfaceHighlight),
+          ),
+          child: Theme(
+            data: ThemeData(
+              dividerColor: Colors.transparent,
+            ),
+            child: ExpansionTile(
+              tilePadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              childrenPadding: const EdgeInsets.all(12),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00FF88).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFF00FF88).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.check_circle,
+                  color: Color(0xFF00FF88),
+                  size: 20,
+                ),
+              ),
+              title: Text(
+                exercise.exerciseName,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: textPrimary,
+                ),
+              ),
+              subtitle: Text(
+                '${completedSets.length} set tamamlandı',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: textSecondary,
+                ),
+              ),
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00FF88).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '${exercise.completionPercentage.toStringAsFixed(0)}%',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF00FF88),
+                  ),
+                ),
+              ),
+              children: [
+                // Header row
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 40),
+                      const Expanded(
+                        child: Text(
+                          'Set',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'Kilo',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'Tekrar',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(width: 40),
+                    ],
+                  ),
+                ),
+                // Completed sets
+                ...completedSets.map((set) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00FF88).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFF00FF88).withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF00FF88),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${set.setNumber}',
+                              style: const TextStyle(
+                                color: Color(0xFF0A0E14),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Set ${set.setNumber}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: textPrimary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            '${set.weight?.toStringAsFixed(1) ?? '-'} kg',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: textPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            '${set.reps ?? '-'}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: textPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Icon(
+                          Icons.check_circle,
+                          color: Color(0xFF00FF88),
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -565,5 +872,68 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
     final weekday = weekdays[date.weekday - 1];
     final month = months[date.month - 1];
     return '${date.day} $month ${date.year}, $weekday';
+  }
+
+  /// Start a new workout or continue an existing one
+  Future<void> _startOrContinueWorkout(List exercises) async {
+    if (_selectedDate == null) return;
+
+    try {
+      String sessionId;
+
+      if (_activeSession != null && !_activeSession!.isCompleted) {
+        // Continue existing session
+        sessionId = _activeSession!.id!;
+      } else {
+        // Create new session
+        final sessionExercises = exercises.map((exercise) {
+          return WorkoutSessionExerciseModel(
+            exerciseId: exercise.exerciseId ?? '',
+            exerciseName: exercise.name ?? 'Unknown',
+            plannedSets: exercise.sets ?? 3,
+            plannedReps: exercise.reps ?? 10,
+          );
+        }).toList();
+
+        final newSession = WorkoutSessionModel(
+          workoutId: widget.workout.id ?? '',
+          workoutName: widget.workout.name ?? 'Workout',
+          date: _selectedDate!,
+          startTime: DateTime.now(),
+          exercises: sessionExercises,
+        );
+
+        sessionId = await _firestoreService.createWorkoutSession(newSession);
+      }
+
+      // Navigate to workout session screen
+      if (mounted) {
+        // Fetch the session to get the latest data
+        final session = await _firestoreService.getWorkoutSession(sessionId);
+        if (session != null && mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => WorkoutSessionScreen(
+                sessionId: sessionId,
+                session: session,
+              ),
+            ),
+          ).then((_) {
+            // Refresh active session when returning
+            _checkActiveSession();
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hata: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

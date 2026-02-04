@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gym_track/product/model/exercise_model.dart';
 import 'package:gym_track/product/model/workout_model.dart';
+import 'package:gym_track/product/model/workout_session_model.dart';
 import 'package:gym_track/product/service/auth_service.dart';
 
 /// Service for managing Firestore operations
@@ -241,5 +242,206 @@ class FirestoreService {
     } catch (e) {
       throw Exception('Failed to fetch exercise: $e');
     }
+  }
+
+  // ==================== Workout Session Management ====================
+
+  /// Get reference to user's workout sessions collection
+  Future<CollectionReference?> _getUserWorkoutSessionsCollection() async {
+    final user = await AuthService.instance.getCurrentUser();
+    if (user == null) return null;
+    return _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('workout_sessions');
+  }
+
+  /// Create a new workout session
+  Future<String> createWorkoutSession(WorkoutSessionModel session) async {
+    try {
+      final collection = await _getUserWorkoutSessionsCollection();
+      if (collection == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final docRef = await collection.add(session.toFirestore());
+      print('Workout session created successfully with ID: ${docRef.id}');
+      return docRef.id;
+    } catch (e) {
+      throw Exception('Failed to create workout session: $e');
+    }
+  }
+
+  /// Get a specific workout session by ID
+  Future<WorkoutSessionModel?> getWorkoutSession(String id) async {
+    try {
+      final collection = await _getUserWorkoutSessionsCollection();
+      if (collection == null) return null;
+
+      final DocumentSnapshot doc = await collection.doc(id).get();
+
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return WorkoutSessionModel.fromJson(data);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to fetch workout session: $e');
+    }
+  }
+
+  /// Get workout sessions for a specific date
+  Future<List<WorkoutSessionModel>> getWorkoutSessionsForDate(
+      DateTime date) async {
+    try {
+      final collection = await _getUserWorkoutSessionsCollection();
+      if (collection == null) return [];
+
+      // Create start and end of day timestamps
+      final startOfDay = DateTime(date.year, date.month, date.day);
+      final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
+
+      final QuerySnapshot snapshot = await collection
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return WorkoutSessionModel.fromJson(data);
+      }).toList();
+    } catch (e) {
+      throw Exception('Failed to fetch workout sessions for date: $e');
+    }
+  }
+
+  /// Get active (incomplete) workout session
+  Future<WorkoutSessionModel?> getActiveWorkoutSession() async {
+    try {
+      final collection = await _getUserWorkoutSessionsCollection();
+      if (collection == null) return null;
+
+      final QuerySnapshot snapshot = await collection
+          .where('isCompleted', isEqualTo: false)
+          .orderBy('startTime', descending: true)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) return null;
+
+      final doc = snapshot.docs.first;
+      final data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return WorkoutSessionModel.fromJson(data);
+    } catch (e) {
+      throw Exception('Failed to fetch active workout session: $e');
+    }
+  }
+
+  /// Update a workout session
+  Future<void> updateWorkoutSession(
+      String id, WorkoutSessionModel session) async {
+    try {
+      final collection = await _getUserWorkoutSessionsCollection();
+      if (collection == null) {
+        throw Exception('User not authenticated');
+      }
+
+      await collection.doc(id).update(session.toFirestore());
+      print('Workout session updated successfully');
+    } catch (e) {
+      throw Exception('Failed to update workout session: $e');
+    }
+  }
+
+  /// Complete a workout session
+  Future<void> completeWorkoutSession(String id) async {
+    try {
+      final collection = await _getUserWorkoutSessionsCollection();
+      if (collection == null) {
+        throw Exception('User not authenticated');
+      }
+
+      await collection.doc(id).update({
+        'isCompleted': true,
+        'endTime': Timestamp.fromDate(DateTime.now()),
+      });
+      print('Workout session completed successfully');
+    } catch (e) {
+      throw Exception('Failed to complete workout session: $e');
+    }
+  }
+
+  /// Get workout history (completed sessions)
+  Future<List<WorkoutSessionModel>> getWorkoutHistory({
+    int limit = 20,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      final collection = await _getUserWorkoutSessionsCollection();
+      if (collection == null) return [];
+
+      Query query = collection
+          .where('isCompleted', isEqualTo: true)
+          .orderBy('date', descending: true);
+
+      if (startDate != null) {
+        query = query.where('date',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+      }
+
+      if (endDate != null) {
+        query = query.where('date',
+            isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+      }
+
+      final QuerySnapshot snapshot = await query.limit(limit).get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return WorkoutSessionModel.fromJson(data);
+      }).toList();
+    } catch (e) {
+      throw Exception('Failed to fetch workout history: $e');
+    }
+  }
+
+  /// Delete a workout session
+  Future<void> deleteWorkoutSession(String id) async {
+    try {
+      final collection = await _getUserWorkoutSessionsCollection();
+      if (collection == null) {
+        throw Exception('User not authenticated');
+      }
+
+      await collection.doc(id).delete();
+      print('Workout session deleted successfully');
+    } catch (e) {
+      throw Exception('Failed to delete workout session: $e');
+    }
+  }
+
+  /// Get workout sessions stream for real-time updates
+  Stream<List<WorkoutSessionModel>> getWorkoutSessionsStream() async* {
+    final collection = await _getUserWorkoutSessionsCollection();
+    if (collection == null) {
+      yield [];
+      return;
+    }
+
+    yield* collection
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return WorkoutSessionModel.fromJson(data);
+      }).toList();
+    });
   }
 }
