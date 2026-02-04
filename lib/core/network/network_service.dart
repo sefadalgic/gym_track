@@ -25,6 +25,7 @@ class NetworkService implements INetworkService {
         data: data,
         queryParameters: queryParameters,
         options: Options(method: method.value),
+        
         onReceiveProgress: onReceiveProgress,
         onSendProgress: onSendProgress,
       );

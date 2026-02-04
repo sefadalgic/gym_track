@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gym_track/feature/workouts/view/create_workout_flow.dart';
+import 'package:gym_track/feature/workouts/widgets/workout_calendar_view.dart';
 import 'package:gym_track/product/model/workout_model.dart';
 import 'package:gym_track/product/service/firestore_service.dart';
 
@@ -26,7 +27,7 @@ class _WorkoutsViewState extends State<WorkoutsView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadActiveWorkout();
   }
 
@@ -102,7 +103,8 @@ class _WorkoutsViewState extends State<WorkoutsView>
           labelColor: const Color(0xFF00D9FF),
           unselectedLabelColor: const Color(0xFF8A8F98),
           tabs: const [
-            Tab(text: 'My Plan', icon: Icon(Icons.calendar_today)),
+            Tab(text: 'My Plan', icon: Icon(Icons.list_alt)),
+            Tab(text: 'Calendar', icon: Icon(Icons.calendar_month)),
             Tab(text: 'History', icon: Icon(Icons.history)),
           ],
         ),
@@ -111,6 +113,7 @@ class _WorkoutsViewState extends State<WorkoutsView>
         controller: _tabController,
         children: [
           _buildMyPlanTab(),
+          WorkoutCalendarView(workout: _activeWorkout!),
           _buildHistoryTab(),
         ],
       ),

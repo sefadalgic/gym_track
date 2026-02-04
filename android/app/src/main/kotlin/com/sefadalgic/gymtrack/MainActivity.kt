@@ -1,4 +1,4 @@
-package com.example.gym_track
+package com.sefadalgic.gymtrack
 
 import io.flutter.embedding.android.FlutterActivity
 

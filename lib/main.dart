@@ -7,7 +7,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gym_track/product/routes/go_routes.dart';
-import 'firebase_options.dart';
 
 //TODO Firebase configuration for IOS
 
@@ -15,9 +14,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp();
 
   // Configure Firebase Auth persistence for web
   // This ensures the user session persists across browser restarts

@@ -13,7 +13,7 @@ import 'package:gym_track/core/network/network_service.dart';
 ///   path: '/users/1',
 ///   parser: User.fromJson,
 /// );
-/// ```
+/// ```w
 class NetworkManager {
   static NetworkManager? _instance;
 
