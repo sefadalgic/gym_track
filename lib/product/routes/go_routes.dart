@@ -38,7 +38,7 @@ final goRouter = GoRouter(initialLocation: NavigationConstants.splash, routes: [
   GoRoute(
     path: NavigationConstants.signup,
     builder: (BuildContext context, GoRouterState state) {
-      return const SignUpView();
+      return const SignUpScreen();
     },
   ),
 ]);
