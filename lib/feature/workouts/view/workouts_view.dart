@@ -12,10 +12,7 @@ class WorkoutsView extends StatefulWidget {
   State<WorkoutsView> createState() => _WorkoutsViewState();
 }
 
-class _WorkoutsViewState extends State<WorkoutsView>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
+class _WorkoutsViewState extends State<WorkoutsView> {
   // Firestore service
   final FirestoreService _firestoreService = FirestoreService.instance;
 
@@ -27,7 +24,6 @@ class _WorkoutsViewState extends State<WorkoutsView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
     _loadActiveWorkout();
   }
 
@@ -54,18 +50,13 @@ class _WorkoutsViewState extends State<WorkoutsView>
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     // Show loading indicator while fetching data
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Workouts'),
+          centerTitle: true,
+          title: const Text('Monthly Progress'),
         ),
         body: const Center(
           child: CircularProgressIndicator(),
@@ -83,51 +74,56 @@ class _WorkoutsViewState extends State<WorkoutsView>
       );
     }
 
-    // Show normal tab view when there's an active plan
+    // Show calendar view when there's an active plan
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E14), // Dark theme background
+      backgroundColor: const Color(0xFF0A0E14), // Dark theme backgrnmound
       appBar: AppBar(
         backgroundColor: const Color(0xFF0A0E14),
+        centerTitle: true,
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF151A21),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.chevron_left, color: Color(0xFFFFFFFF)),
+              onPressed: () => Navigator.of(context).pop(),
+              padding: EdgeInsets.zero,
+            ),
+          ),
+        ),
         title: const Text(
-          'Workouts',
+          'Monthly Progress',
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Color(0xFFFFFFFF),
           ),
         ),
-        elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: const Color(0xFF00D9FF),
-          labelColor: const Color(0xFF00D9FF),
-          unselectedLabelColor: const Color(0xFF8A8F98),
-          tabs: const [
-            Tab(text: 'My Plan', icon: Icon(Icons.list_alt)),
-            Tab(text: 'Calendar', icon: Icon(Icons.calendar_month)),
-            Tab(text: 'History', icon: Icon(Icons.history)),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildMyPlanTab(),
-          WorkoutCalendarView(workout: _activeWorkout!),
-          _buildHistoryTab(),
-        ],
-      ),
-      floatingActionButton: _tabController.index == 0
-          ? FloatingActionButton.extended(
-              onPressed: () => _createWeeklyPlan(context),
-              backgroundColor: const Color(0xFF00D9FF),
-              icon: const Icon(Icons.add, color: Color(0xFF0A0E14)),
-              label: const Text(
-                'New Plan',
-                style: TextStyle(color: Color(0xFF0A0E14)),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF151A21),
+                shape: BoxShape.circle,
               ),
-            )
-          : null,
+              child: IconButton(
+                icon:
+                    const Icon(Icons.calendar_today, color: Color(0xFF00FF88)),
+                onPressed: () {
+                  // TODO: Calendar action
+                },
+                padding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+        ],
+        elevation: 0,
+      ),
+      body: WorkoutCalendarView(workout: _activeWorkout!),
     );
   }
 

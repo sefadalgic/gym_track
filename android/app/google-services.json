@@ -2,7 +2,7 @@
   "project_info": {
     "project_number": "495544191021",
     "project_id": "gymtrack-6ccad",
-    "storage_bucket": "gymtrack-6ccad.h.app"
+    "storage_bucket": "gymtrack-6ccad.firebasestorage.app"
   },
   "client": [
     {
@@ -13,6 +13,14 @@
         }
       },
       "oauth_client": [
+        {
+          "client_id": "495544191021-s52acqgo6if7okl34fst5murjpa9k1m8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sefadalgic.gymtrack",
+            "certificate_hash": "27a260732489043b2d47efdf09da744c4dcc6f5f"
+          }
+        },
         {
           "client_id": "495544191021-9js1hl8s741vdf086u26rhq723i2a8a7.apps.googleusercontent.com",
           "client_type": 3

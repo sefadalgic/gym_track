@@ -6,6 +6,9 @@ import 'package:gym_track/core/constants/app/app_constants.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:gym_track/core/constants/app/color_constants.dart';
+import 'package:gym_track/core/thene/app_theme.dart';
+import 'package:gym_track/firebase_options.dart';
 import 'package:gym_track/product/routes/go_routes.dart';
 
 //TODO Firebase configuration for IOS
@@ -14,7 +17,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Configure Firebase Auth persistence for web
   // This ensures the user session persists across browser restarts
@@ -46,10 +51,7 @@ class MyApp extends StatelessWidget {
       routerConfig: goRouter,
       title: AppConstants.APP_NAME,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.darkTheme,
     );
   }
 }

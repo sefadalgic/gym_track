@@ -7,10 +7,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:gym_track/core/constants/app/color_constants.dart';
+import 'package:gym_track/core/constants/image/image_constants.dart';
 import 'package:gym_track/core/constants/navigation/navigation_constants.dart';
+import 'package:gym_track/core/thene/app_theme.dart';
 import 'package:gym_track/feature/login/theme/login_theme.dart';
 import 'package:gym_track/feature/signup/signup_view.dart';
+import 'package:gym_track/product/widget/text_field/auth_field.dart';
 import 'package:http/http.dart' as http;
+import 'package:ionicons/ionicons.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -385,41 +390,36 @@ class _LoginViewState extends State<LoginView>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LoginTheme.backgroundGradient,
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Padding(
-              padding: LoginTheme.pagePadding,
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 60),
-                      _buildHeader(),
-                      const SizedBox(height: 60),
-                      _buildLoginForm(),
-                      const SizedBox(height: 24),
-                      _buildForgotPassword(),
-                      const SizedBox(height: 32),
-                      _buildLoginButton(),
-                      const SizedBox(height: 32),
-                      _buildDivider(),
-                      const SizedBox(height: 32),
-                      if (_currentUser != null)
-                        ..._buildAuthenticatedWidgets(_currentUser!),
-                      _buildSocialLogin(),
-                      const SizedBox(height: 40),
-                      _buildSignUpPrompt(),
-                      const SizedBox(height: 40),
-                    ],
-                  ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 60),
+                    _buildHeader(),
+                    const SizedBox(height: 60),
+                    _buildLoginForm(),
+                    const SizedBox(height: 24),
+                    _buildForgotPassword(),
+                    const SizedBox(height: 32),
+                    _buildLoginButton(),
+                    const SizedBox(height: 32),
+                    _buildDivider(),
+                    const SizedBox(height: 32),
+                    if (_currentUser != null)
+                      ..._buildAuthenticatedWidgets(_currentUser!),
+                    _buildSocialLogin(),
+                    const SizedBox(height: 40),
+                    _buildSignUpPrompt(),
+                    const SizedBox(height: 40),
+                  ],
                 ),
               ),
             ),
@@ -430,35 +430,19 @@ class _LoginViewState extends State<LoginView>
   }
 
   Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Animated logo/icon
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            gradient: LoginTheme.buttonGradient,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: LoginTheme.glowShadow,
-          ),
-          child: const Icon(
-            Icons.fitness_center,
-            color: LoginTheme.background,
-            size: 32,
-          ),
-        ),
-        const SizedBox(height: 24),
-        const Text(
-          'Welcome\nBack',
-          style: LoginTheme.title,
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Track your fitness journey',
-          style: LoginTheme.subtitle,
-        ),
-      ],
+    return Center(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Image.asset(
+            ImageConstants.instance.logo,
+            height: 200,
+          )
+
+          //
+          // Image.asset()
+        ],
+      ),
     );
   }
 
@@ -468,7 +452,7 @@ class _LoginViewState extends State<LoginView>
       child: Column(
         children: [
           _buildEmailField(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 30),
           _buildPasswordField(),
         ],
       ),
@@ -479,50 +463,11 @@ class _LoginViewState extends State<LoginView>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 8),
-          child: Text('EMAIL', style: LoginTheme.inputLabel),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            gradient: LoginTheme.inputGradient,
-            borderRadius: BorderRadius.circular(LoginTheme.inputRadius),
-            boxShadow: LoginTheme.inputShadow,
-          ),
-          child: TextFormField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            style: LoginTheme.inputText,
-            decoration: InputDecoration(
-              hintText: 'your.email@example.com',
-              hintStyle: LoginTheme.inputText.copyWith(
-                color: LoginTheme.textSecondary.withValues(alpha: 0.5),
-              ),
-              prefixIcon: const Icon(
-                Icons.email_outlined,
-                color: LoginTheme.primary,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(LoginTheme.inputRadius),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: Colors.transparent,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 18,
-              ),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your email';
-              }
-              if (!value.contains('@')) {
-                return 'Please enter a valid email';
-              }
-              return null;
-            },
-          ),
+        AuthTextField(
+          controller: _emailController,
+          hint: 'mail@example.com',
+          prefixIcon: Icons.email,
+          label: 'E-Mail',
         ),
       ],
     );
@@ -532,61 +477,12 @@ class _LoginViewState extends State<LoginView>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 8),
-          child: Text('PASSWORD', style: LoginTheme.inputLabel),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            gradient: LoginTheme.inputGradient,
-            borderRadius: BorderRadius.circular(LoginTheme.inputRadius),
-            boxShadow: LoginTheme.inputShadow,
-          ),
-          child: TextFormField(
-            controller: _passwordController,
-            obscureText: _obscurePassword,
-            style: LoginTheme.inputText,
-            decoration: InputDecoration(
-              hintText: '••••••••',
-              hintStyle: LoginTheme.inputText.copyWith(
-                color: LoginTheme.textSecondary.withValues(alpha: 0.5),
-              ),
-              prefixIcon: const Icon(
-                Icons.lock_outline,
-                color: LoginTheme.primary,
-              ),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: LoginTheme.textSecondary,
-                ),
-                onPressed: () {
-                  setState(() => _obscurePassword = !_obscurePassword);
-                },
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(LoginTheme.inputRadius),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: Colors.transparent,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 18,
-              ),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your password';
-              }
-              if (value.length < 6) {
-                return 'Password must be at least 6 characters';
-              }
-              return null;
-            },
-          ),
+        AuthTextField(
+          controller: _passwordController,
+          label: "Password",
+          hint: '*********',
+          prefixIcon: Icons.lock,
+          obscureText: true,
         ),
       ],
     );
@@ -601,41 +497,22 @@ class _LoginViewState extends State<LoginView>
         },
         child: const Text(
           'Forgot Password?',
-          style: LoginTheme.linkText,
         ),
       ),
     );
   }
 
   Widget _buildLoginButton() {
-    return Container(
+    return SizedBox(
       width: double.infinity,
-      height: LoginTheme.buttonHeight,
-      decoration: BoxDecoration(
-        gradient: LoginTheme.buttonGradient,
-        borderRadius: BorderRadius.circular(LoginTheme.buttonRadius),
-        boxShadow: LoginTheme.buttonShadow,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _isLoading ? null : _handleLogin,
-          borderRadius: BorderRadius.circular(LoginTheme.buttonRadius),
-          child: Center(
-            child: _isLoading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: LoginTheme.background,
-                      strokeWidth: 3,
-                    ),
-                  )
-                : const Text(
-                    'LOGIN',
-                    style: LoginTheme.buttonText,
-                  ),
-          ),
+      child: ElevatedButton(
+        onPressed: _handleLogin,
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+        child: Text(
+          'Giriş Yap',
+          style: Theme.of(context).textTheme.titleMedium,
         ),
       ),
     );
@@ -688,15 +565,11 @@ class _LoginViewState extends State<LoginView>
       children: [
         Expanded(
             child: _buildSocialButton(
-                Icons.g_mobiledata, 'Google', _signInGoogle)),
+                Ionicons.logo_google, 'Google', _signInGoogle)),
         const SizedBox(width: 16),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: <Widget>[
-            if (_currentUser == null) ..._buildUnauthenticatedWidgets(),
-            if (_errorMessage.isNotEmpty) Text(_errorMessage),
-          ],
-        )
+        Expanded(
+            child: _buildSocialButton(
+                Ionicons.logo_apple, 'Apple', _signInGoogle)),
       ],
     );
   }
@@ -712,34 +585,28 @@ class _LoginViewState extends State<LoginView>
   }
 
   Widget _buildSocialButton(IconData icon, String label, VoidCallback onTap) {
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        color: LoginTheme.surfaceHighlight,
-        borderRadius: BorderRadius.circular(LoginTheme.buttonRadius),
-        border: Border.all(
-          color: LoginTheme.secondary.withValues(alpha: 0.2),
-          width: 1,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            // TODO: Implement social login
-          },
-          borderRadius: BorderRadius.circular(LoginTheme.buttonRadius),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: LoginTheme.textPrimary, size: 24),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: LoginTheme.inputText.copyWith(fontSize: 14),
-              ),
-            ],
+    return InkWell(
+      onTap: () {},
+      child: Container(
+        height: 56,
+        decoration: BoxDecoration(
+          color: AppTheme.background.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.secondary.withValues(alpha: 0.2),
+            width: 1,
           ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 24),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: LoginTheme.inputText.copyWith(fontSize: 14),
+            ),
+          ],
         ),
       ),
     );
@@ -765,7 +632,6 @@ class _LoginViewState extends State<LoginView>
             ),
             child: const Text(
               'Sign Up',
-              style: LoginTheme.linkText,
             ),
           ),
         ],

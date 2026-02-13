@@ -27,7 +27,7 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
   static const Color background = Color(0xFF0A0E14);
   static const Color surface = Color(0xFF151A21);
   static const Color surfaceHighlight = Color(0xFF1E252E);
-  static const Color primary = Color(0xFF00D9FF);
+  static const Color primary = Color(0xFF00FF88); // Green accent
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFF8A8F98);
 
@@ -86,63 +86,48 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
 
   /// Calendar header with month navigation
   Widget _buildCalendarHeader() {
+    // Calculate active days in current month
+    final activeDays = _getActiveDaysInMonth(_currentMonth);
+    final totalDays = _getDaysInMonth(_currentMonth);
+
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF151A21), Color(0xFF12161C)],
-        ),
-        border: Border(
-          bottom: BorderSide(color: surfaceHighlight),
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: const BoxDecoration(
+        color: background,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
         children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left, color: primary),
-            onPressed: _previousMonth,
+          Text(
+            _formatMonthYear(_currentMonth),
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: textPrimary,
+              letterSpacing: 0.5,
+            ),
           ),
-          Column(
-            children: [
-              Text(
-                _formatMonthYear(_currentMonth),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.workout.name ?? 'Antrenman Planı',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: textSecondary,
-                ),
-              ),
-            ],
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right, color: primary),
-            onPressed: _nextMonth,
+          const SizedBox(height: 6),
+          Text(
+            '$activeDays/$totalDays Days active',
+            style: const TextStyle(
+              fontSize: 14,
+              color: primary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Weekday labels (Pzt, Sal, Çar, etc.)
+  /// Weekday labels (MON, TUE, WED, etc.)
   Widget _buildWeekdayLabels() {
-    final weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+    final weekdays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: surface,
-        border: Border(
-          bottom: BorderSide(color: surfaceHighlight),
-        ),
+      decoration: const BoxDecoration(
+        color: background,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -152,9 +137,9 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
               child: Text(
                 day,
                 style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: primary,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -215,19 +200,17 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
     required bool hasWorkout,
     required int exerciseCount,
   }) {
-    Color backgroundColor = surface;
-    Color borderColor = surfaceHighlight;
+    Color backgroundColor = Colors.transparent;
+    Color? borderColor;
     Color textColor = textPrimary;
 
     if (isSelected) {
-      backgroundColor = primary.withValues(alpha: 0.2);
+      backgroundColor = primary.withValues(alpha: 0.15);
       borderColor = primary;
-    } else if (isToday) {
-      borderColor = primary.withValues(alpha: 0.5);
     }
 
     if (!_isInCurrentMonth(date)) {
-      textColor = textSecondary.withValues(alpha: 0.3);
+      textColor = textSecondary.withValues(alpha: 0.4);
     }
 
     return GestureDetector(
@@ -240,16 +223,9 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
       child: Container(
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor, width: 1.5),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    spreadRadius: 0,
-                  ),
-                ]
+          borderRadius: BorderRadius.circular(8),
+          border: borderColor != null
+              ? Border.all(color: borderColor, width: 2)
               : null,
         ),
         child: Column(
@@ -259,39 +235,24 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
             Text(
               '$day',
               style: TextStyle(
-                fontSize: 16,
-                fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
                 color: textColor,
               ),
             ),
-            const SizedBox(height: 4),
-            // Workout indicator
-            if (hasWorkout) ...[
+            const SizedBox(height: 6),
+            // Workout indicator - small dot
+            if (hasWorkout)
               Container(
-                width: 6,
-                height: 6,
+                width: 5,
+                height: 5,
                 decoration: BoxDecoration(
                   color: primary,
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: primary.withValues(alpha: 0.5),
-                      blurRadius: 4,
-                      spreadRadius: 1,
-                    ),
-                  ],
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '$exerciseCount',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: primary,
-                ),
-              ),
-            ],
+              )
+            else
+              const SizedBox(height: 5),
           ],
         ),
       ),
@@ -327,72 +288,49 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Row(
               children: [
+                // Green dot indicator
                 Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF00D9FF), Color(0xFF00B8D4)],
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: primary.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.calendar_today,
-                    color: Color(0xFF0A0E14),
-                    size: 20,
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: primary,
+                    shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        formattedDate,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: textPrimary,
-                        ),
-                      ),
-                      if (_activeSession != null && _activeSession!.isCompleted)
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.check_circle,
-                              color: Color(0xFF00FF88),
-                              size: 14,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Tamamlandı • ${_activeSession!.totalCompletedSets} set',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF00FF88),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        )
-                      else if (exercises.isNotEmpty)
-                        Text(
-                          '${exercises.length} egzersiz',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: textSecondary,
-                          ),
-                        ),
-                    ],
+                  child: Text(
+                    formattedDate,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textPrimary,
+                    ),
                   ),
                 ),
+                // Completion badge
+                if (_activeSession != null && _activeSession!.isCompleted)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: primary.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Completed',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -799,6 +737,20 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
     return _getExercisesForDate(date).isNotEmpty;
   }
 
+  int _getActiveDaysInMonth(DateTime month) {
+    final daysInMonth = _getDaysInMonth(month);
+    int activeDays = 0;
+
+    for (int day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(month.year, month.month, day);
+      if (_hasWorkoutOnDay(date)) {
+        activeDays++;
+      }
+    }
+
+    return activeDays;
+  }
+
   Days _getDayOfWeek(DateTime date) {
     // DateTime.weekday: 1 = Monday, 7 = Sunday
     switch (date.weekday) {
@@ -826,21 +778,21 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
     return widget.workout.exercises?[dayOfWeek] ?? [];
   }
 
-  // Turkish date formatting helpers
+  // Date formatting helpers
   String _formatMonthYear(DateTime date) {
     final months = [
-      'Ocak',
-      'Şubat',
-      'Mart',
-      'Nisan',
-      'Mayıs',
-      'Haziran',
-      'Temmuz',
-      'Ağustos',
-      'Eylül',
-      'Ekim',
-      'Kasım',
-      'Aralık'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return '${months[date.month - 1]} ${date.year}';
   }

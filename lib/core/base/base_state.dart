@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:gym_track/core/constants/image/image_constants.dart';
 
 /// Base state class for all BLoC states in the application.
 ///
