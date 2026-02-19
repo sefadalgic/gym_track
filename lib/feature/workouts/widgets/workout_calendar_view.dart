@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:gym_track/core/base/base_widget_mixin.dart';
 import 'package:gym_track/core/constants/enums/days.dart';
+import 'package:gym_track/core/thene/app_theme.dart';
 import 'package:gym_track/product/model/workout_model.dart';
 import 'package:gym_track/product/model/workout_session_model.dart';
 import 'package:gym_track/product/model/workout_session_exercise_model.dart';
@@ -19,7 +21,8 @@ class WorkoutCalendarView extends StatefulWidget {
   State<WorkoutCalendarView> createState() => _WorkoutCalendarViewState();
 }
 
-class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
+class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
+    with BaseWidgetMixin {
   late DateTime _currentMonth;
   DateTime? _selectedDate;
 
@@ -27,7 +30,6 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
   static const Color background = Color(0xFF0A0E14);
   static const Color surface = Color(0xFF151A21);
   static const Color surfaceHighlight = Color(0xFF1E252E);
-  static const Color primary = Color(0xFF00FF88); // Green accent
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFF8A8F98);
 
@@ -69,17 +71,45 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: background,
-      child: Column(
-        children: [
-          _buildCalendarHeader(),
-          _buildWeekdayLabels(),
-          Expanded(
-            child: _buildCalendarGrid(),
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: background,
+        elevation: 0,
+        leading: Container(
+          margin: padding.only(context, left: 6),
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppTheme.primary.withValues(alpha: 0.1),
           ),
-          if (_selectedDate != null) _buildSelectedDayDetails(),
-        ],
+          child: IconButton(
+            icon: const Icon(Icons.chevron_left_outlined,
+                color: AppTheme.primary),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        title: const Text(
+          'Monthly Progress',
+          style: TextStyle(
+            color: AppTheme.textPrimary,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+      ),
+      body: Container(
+        color: background,
+        child: Column(
+          children: [
+            _buildCalendarHeader(),
+            _buildWeekdayLabels(),
+            Expanded(
+              child: _buildCalendarGrid(),
+            ),
+            // if (_selectedDate != null) _buildSelectedDayDetails(),
+          ],
+        ),
       ),
     );
   }
@@ -92,10 +122,12 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      width: double.infinity,
       decoration: const BoxDecoration(
         color: background,
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             _formatMonthYear(_currentMonth),
@@ -111,7 +143,7 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
             '$activeDays/$totalDays Days active',
             style: const TextStyle(
               fontSize: 14,
-              color: primary,
+              color: AppTheme.primary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -139,7 +171,7 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: primary,
+                  color: AppTheme.primary,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -158,10 +190,11 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
     final startingWeekday = firstDayOfMonth.weekday; // 1 = Monday, 7 = Sunday
 
     return GridView.builder(
+      physics: NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(8),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7,
-        childAspectRatio: 0.8,
+        childAspectRatio: 1,
         crossAxisSpacing: 4,
         mainAxisSpacing: 4,
       ),
@@ -205,8 +238,8 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
     Color textColor = textPrimary;
 
     if (isSelected) {
-      backgroundColor = primary.withValues(alpha: 0.15);
-      borderColor = primary;
+      backgroundColor = AppTheme.primary.withValues(alpha: 0.15);
+      borderColor = AppTheme.primary;
     }
 
     if (!_isInCurrentMonth(date)) {
@@ -247,7 +280,7 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
                 width: 5,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: primary,
+                  color: AppTheme.primary,
                   shape: BoxShape.circle,
                 ),
               )
@@ -296,7 +329,7 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
                   width: 8,
                   height: 8,
                   decoration: const BoxDecoration(
-                    color: primary,
+                    color: AppTheme.primary,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -319,14 +352,14 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: primary.withValues(alpha: 0.2),
+                      color: AppTheme.primary.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
                       'Completed',
                       style: TextStyle(
                         fontSize: 13,
-                        color: primary,
+                        color: AppTheme.primary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -346,7 +379,7 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
                       child: ElevatedButton(
                         onPressed: () => _startOrContinueWorkout(exercises),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: primary,
+                          backgroundColor: AppTheme.primary,
                           foregroundColor: const Color(0xFF0A0E14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -422,7 +455,7 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
                               color: surfaceHighlight,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: primary.withValues(alpha: 0.2),
+                                color: AppTheme.primary.withValues(alpha: 0.2),
                               ),
                             ),
                             child: Row(
@@ -431,14 +464,15 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
                                   width: 28,
                                   height: 28,
                                   decoration: BoxDecoration(
-                                    color: primary.withValues(alpha: 0.2),
+                                    color:
+                                        AppTheme.primary.withValues(alpha: 0.2),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Center(
                                     child: Text(
                                       '${index + 1}',
                                       style: const TextStyle(
-                                        color: primary,
+                                        color: AppTheme.primary,
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -464,13 +498,14 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [
-                                        primary.withValues(alpha: 0.2),
-                                        primary.withValues(alpha: 0.1),
+                                        AppTheme.primary.withValues(alpha: 0.2),
+                                        AppTheme.primary.withValues(alpha: 0.1),
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: primary.withValues(alpha: 0.3),
+                                      color: AppTheme.primary
+                                          .withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: Text(
@@ -478,7 +513,7 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView> {
                                     style: const TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
-                                      color: primary,
+                                      color: AppTheme.primary,
                                     ),
                                   ),
                                 ),

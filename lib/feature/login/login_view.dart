@@ -13,6 +13,7 @@ import 'package:gym_track/core/constants/navigation/navigation_constants.dart';
 import 'package:gym_track/core/thene/app_theme.dart';
 import 'package:gym_track/feature/login/theme/login_theme.dart';
 import 'package:gym_track/feature/signup/signup_view.dart';
+import 'package:gym_track/product/widget/button/auth_social_login_button.dart';
 import 'package:gym_track/product/widget/text_field/auth_field.dart';
 import 'package:http/http.dart' as http;
 import 'package:ionicons/ionicons.dart';
@@ -564,12 +565,16 @@ class _LoginViewState extends State<LoginView>
     return Row(
       children: [
         Expanded(
-            child: _buildSocialButton(
-                Ionicons.logo_google, 'Google', _signInGoogle)),
+            child: AuthSocialButton(
+                icon: Ionicons.logo_google,
+                label: 'Google',
+                onPressed: _signInGoogle)),
         const SizedBox(width: 16),
         Expanded(
-            child: _buildSocialButton(
-                Ionicons.logo_apple, 'Apple', _signInGoogle)),
+            child: AuthSocialButton(
+                icon: Ionicons.logo_apple,
+                label: 'Apple',
+                onPressed: _signInGoogle)),
       ],
     );
   }
@@ -582,34 +587,6 @@ class _LoginViewState extends State<LoginView>
     } catch (e) {
       debugPrint('Error signing in with Google: $e');
     }
-  }
-
-  Widget _buildSocialButton(IconData icon, String label, VoidCallback onTap) {
-    return InkWell(
-      onTap: () {},
-      child: Container(
-        height: 56,
-        decoration: BoxDecoration(
-          color: AppTheme.background.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppTheme.secondary.withValues(alpha: 0.2),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.white, size: 24),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: LoginTheme.inputText.copyWith(fontSize: 14),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildSignUpPrompt() {

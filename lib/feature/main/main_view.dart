@@ -3,6 +3,9 @@ import 'package:gym_track/feature/exercices/view/exercises_view.dart';
 import 'package:gym_track/feature/home/home_view.dart';
 import 'package:gym_track/feature/profile/view/profile_view.dart';
 import 'package:gym_track/feature/workouts/view/workouts_view.dart';
+import 'package:gym_track/feature/workouts/widgets/workout_calendar_view.dart';
+import 'package:gym_track/product/model/workout_model.dart';
+import 'package:gym_track/product/service/firestore_service.dart';
 
 /// Main view with bottom navigation bar
 class MainView extends StatefulWidget {
@@ -14,14 +17,65 @@ class MainView extends StatefulWidget {
 
 class _MainViewState extends State<MainView> {
   int _currentIndex = 0;
+  WorkoutModel? _activeWorkout;
+  bool _isLoadingWorkout = true;
+  final FirestoreService _firestoreService = FirestoreService.instance;
 
-  // List of pages for bottom navigation
-  final List<Widget> _pages = const [
-    HomeView(),
-    WorkoutsView(),
-    ExercisesView(),
-    ProfileView(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadActiveWorkout();
+  }
+
+  /// Load the active workout from Firestore
+  Future<void> _loadActiveWorkout() async {
+    try {
+      final workout = await _firestoreService.getActiveWorkout();
+      if (mounted) {
+        setState(() {
+          _activeWorkout = workout;
+          _isLoadingWorkout = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading active workout: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingWorkout = false;
+        });
+      }
+    }
+  }
+
+  /// Get the list of pages for bottom navigation
+  List<Widget> get _pages {
+    return [
+      HomeView(),
+      _isLoadingWorkout
+          ? const Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFF00D9FF),
+              ),
+            )
+          : _activeWorkout != null
+              ? WorkoutCalendarView(workout: _activeWorkout!)
+              : const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24.0),
+                    child: Text(
+                      'No active workout plan.\nCreate one to get started!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFF8A8F98),
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+      ExercisesView(),
+      ProfileView(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {

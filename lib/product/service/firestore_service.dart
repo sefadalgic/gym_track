@@ -37,6 +37,8 @@ class FirestoreService {
   /// Get reference to user's workouts collection
   Future<CollectionReference?> _getUserWorkoutsCollection() async {
     final user = await AuthService.instance.getCurrentUser();
+
+    print('User: $user');
     if (user == null) return null;
     return _firestore.collection('users').doc(user.uid).collection('workouts');
   }
@@ -84,6 +86,7 @@ class FirestoreService {
   Future<WorkoutModel?> getActiveWorkout() async {
     try {
       final collection = await _getUserWorkoutsCollection();
+
       if (collection == null) return null;
 
       final QuerySnapshot snapshot =

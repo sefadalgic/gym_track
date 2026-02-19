@@ -109,11 +109,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
                 fontSize: 15,
               ),
               filled: true,
-              fillColor: widget.fillColor ??
-                  (widget.enabled
-                      ? const Color(0xFF6B8A7A)
-                          .withOpacity(0.3) // Görseldeki gibi yeşilimsi ton
-                      : AppTheme.cardBackground.withOpacity(0.5)),
+              fillColor: Color(0x0DFFFFFF),
 
               // Prefix icon
               prefixIcon: widget.prefixIcon != null
@@ -160,21 +156,21 @@ class _AuthTextFieldState extends State<AuthTextField> {
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(
                   color: AppTheme.primary,
-                  width: 2,
+                  width: 1,
                 ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(
                   color: AppTheme.error,
-                  width: 2,
+                  width: 1,
                 ),
               ),
               focusedErrorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(
                   color: AppTheme.error,
-                  width: 2,
+                  width: 1,
                 ),
               ),
               disabledBorder: OutlineInputBorder(

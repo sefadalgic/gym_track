@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:gym_track/core/thene/app_theme.dart';
+import 'package:gym_track/product/widget/button/auth_social_login_button.dart';
 import 'package:gym_track/product/widget/text_field/auth_field.dart';
+import 'package:ionicons/ionicons.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -344,52 +346,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: _SocialLoginButton(
-                        label: 'Google',
-                        onPressed: () {},
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Image.network(
-                              'https://www.google.com/favicon.ico',
-                              width: 20,
-                              height: 20,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.g_mobiledata, size: 24),
-                            ),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Google',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      child: AuthSocialButton(
+                          onPressed: () {},
+                          icon: Ionicons.logo_google,
+                          label: 'Google'),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: _SocialLoginButton(
-                        label: 'Facebook',
-                        onPressed: () {},
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.facebook,
-                                size: 20, color: Color(0xFF1877F2)),
-                            SizedBox(width: 8),
-                            Text(
-                              'Facebook',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      child: AuthSocialButton(
+                          onPressed: () {},
+                          icon: Ionicons.logo_apple,
+                          label: 'Apple'),
                     ),
                   ],
                 ),

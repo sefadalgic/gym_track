@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:gym_track/core/constants/app/padding_constants.dart';
 import 'package:gym_track/core/constants/image/image_constants.dart';
 
 /// Base state class for all BLoC states in the application.
@@ -6,6 +7,7 @@ import 'package:gym_track/core/constants/image/image_constants.dart';
 /// Provides common state properties:
 /// - [isLoading]: Indicates if an operation is in progress
 /// - [error]: Contains error message if an error occurred
+/// - [padding]: Access to responsive padding constants
 ///
 /// All states should extend this class and use Equatable for value comparison.
 ///
@@ -47,6 +49,8 @@ abstract class BaseState extends Equatable {
     this.isLoading = false,
     this.error,
   });
+
+  PaddingConstants get padding => PaddingConstants.instance;
 
   @override
   List<Object?> get props => [isLoading, error];

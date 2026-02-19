@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gym_track/core/cache/cache_manager.dart';
 import 'package:gym_track/core/constants/app/app_constants.dart';
@@ -23,7 +22,7 @@ Future<void> main() async {
 
   // Configure Firebase Auth persistence for web
   // This ensures the user session persists across browser restarts
-  if (!(Platform.isAndroid || Platform.isIOS)) {
+  if (kIsWeb) {
     await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
   }
 
