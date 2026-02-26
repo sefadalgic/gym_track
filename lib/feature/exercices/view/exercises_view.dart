@@ -7,8 +7,9 @@ import 'package:gym_track/feature/exercices/state/exercises_state.dart';
 import 'package:gym_track/feature/exercices/theme/exercises_theme.dart';
 import 'package:gym_track/feature/exercices/widgets/exercise_card.dart';
 import 'package:gym_track/feature/exercices/widgets/filter_bar.dart';
+import 'package:gym_track/feature/exercices/view/exercise_detail_view.dart';
 import 'package:gym_track/product/model/muscle_group.dart';
- 
+
 /// View for displaying list of exercises with premium design
 class ExercisesView extends BaseView<ExercisesBloc, ExercisesState> {
   const ExercisesView({super.key});
@@ -35,78 +36,55 @@ class ExercisesView extends BaseView<ExercisesBloc, ExercisesState> {
   Widget buildView(BuildContext context, ExercisesState state) {
     return Scaffold(
       backgroundColor: ExercisesTheme.background,
+      appBar: _buildAppBar(context),
       body: CustomScrollView(
         slivers: [
-          // Sticky Top Bar
-          SliverAppBar(
-            backgroundColor: ExercisesTheme.background.withValues(alpha: 0.95),
-            title: const Text('Exercise Library', style: ExercisesTheme.title),
-            centerTitle: false,
-            pinned: true,
-            elevation: 0,
-            floating: true,
-            snap: true,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh, color: ExercisesTheme.primary),
-                onPressed: () {
-                  context
-                      .read<ExercisesBloc>()
-                      .add(const ExercisesRefreshRequested());
-                },
-              ),
-            ],
-          ),
-
-          // Search Input
+          // Search Bar
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: TextField(
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Search exercises...',
-                  hintStyle: TextStyle(color: Colors.grey[600]),
-                  prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-                  filled: true,
-                  fillColor: ExercisesTheme.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 0,
-                  ),
-                ),
-                onChanged: (value) {
-                  // TODO: Implement search in Bloc
-                },
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: _buildSearchBar(),
             ),
           ),
 
           // Filter Bar
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.only(bottom: 24),
               child: FilterBar(
                 isMuscleGroupActive: state.selectedMuscleGroup != null,
                 onMuscleGroupTap: () => _showMuscleGroupFilter(context, state),
-                onEquipmentTap: () {
-                  // TODO: Implement equipment filter
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Equipment filter check')),
-                  );
-                },
-                onDifficultyTap: () {
-                  // TODO: Implement difficulty filter
-                },
               ),
             ),
           ),
 
-          // Content
+          // Section Header
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Popular Exercises',
+                    style: ExercisesTheme.sectionTitle,
+                  ),
+                  TextButton(
+                    onPressed: () {},
+                    child: const Text(
+                      'See all',
+                      style: TextStyle(
+                        color: ExercisesTheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Exercise List
           if (state.isEmpty || (state.isFilteredEmpty && !state.isLoading))
             SliverFillRemaining(
               child: _buildEmptyState(context, state.isFilteredEmpty),
@@ -119,14 +97,11 @@ class ExercisesView extends BaseView<ExercisesBloc, ExercisesState> {
                   return ExerciseCard(
                     exercise: exercise,
                     onTap: () {
-                      context.read<ExercisesBloc>().add(
-                            ExerciseSelected(exercise.id!),
-                          );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Selected: ${exercise.name}'),
-                          duration: const Duration(milliseconds: 600),
-                          backgroundColor: ExercisesTheme.surfaceHighlight,
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              ExerciseDetailView(exercise: exercise),
                         ),
                       );
                     },
@@ -136,9 +111,71 @@ class ExercisesView extends BaseView<ExercisesBloc, ExercisesState> {
               ),
             ),
 
-          // Bottom padding for scroll
-          const SliverToBoxAdapter(child: SizedBox(height: 80)),
+          // Bottom Spacer
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      leadingWidth: 64,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 12),
+        child: Center(
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.maybePop(context),
+          ),
+        ),
+      ),
+      title: const Text('Exercise Library', style: ExercisesTheme.title),
+      centerTitle: true,
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: ExercisesTheme.surface,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon:
+                  const Icon(Icons.tune_rounded, color: ExercisesTheme.primary),
+              onPressed: () {},
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: ExercisesTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: ExercisesTheme.surfaceHighlight.withValues(alpha: 0.3),
+        ),
+      ),
+      child: TextField(
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: 'Search for exercises, muscles...',
+          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+          prefixIcon: Icon(
+            Icons.search,
+            color: Colors.white.withValues(alpha: 0.5),
+            size: 20,
+          ),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
       ),
     );
   }

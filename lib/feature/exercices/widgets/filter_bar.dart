@@ -18,37 +18,38 @@ class FilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 50,
+      height: 44,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         children: [
           _BuildFilterChip(
-            label: 'Muscle Group',
+            label: 'All',
+            isActive: !isMuscleGroupActive,
+            onTap: () {
+              // Reset filter logic would be here
+            },
+          ),
+          const SizedBox(width: 12),
+          _BuildFilterChip(
+            label: 'Chest',
             isActive: isMuscleGroupActive,
             onTap: onMuscleGroupTap,
-            icon: Icons.accessibility_new_rounded,
+            hasDropdown: true,
           ),
           const SizedBox(width: 12),
           _BuildFilterChip(
             label: 'Equipment',
-            isActive: false, // Placeholder for future implementation
+            isActive: false,
             onTap: onEquipmentTap,
-            icon: Icons.fitness_center_rounded,
+            hasDropdown: true,
           ),
           const SizedBox(width: 12),
           _BuildFilterChip(
             label: 'Difficulty',
-            isActive: false, // Placeholder for future implementation
+            isActive: false,
             onTap: onDifficultyTap,
-            icon: Icons.speed_rounded,
-          ),
-          const SizedBox(width: 12),
-          _BuildFilterChip(
-            label: 'Movement',
-            isActive: false, // Placeholder for future implementation
-            onTap: () {},
-            icon: Icons.compare_arrows_rounded,
+            hasDropdown: true,
           ),
         ],
       ),
@@ -60,65 +61,49 @@ class _BuildFilterChip extends StatelessWidget {
   final String label;
   final bool isActive;
   final VoidCallback? onTap;
-  final IconData? icon;
+  final bool hasDropdown;
 
   const _BuildFilterChip({
     required this.label,
     required this.isActive,
     this.onTap,
-    this.icon,
+    this.hasDropdown = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? null : ExercisesTheme.surfaceHighlight,
-          gradient: isActive ? ExercisesTheme.activeChipGradient : null,
+          color: isActive ? ExercisesTheme.primary : ExercisesTheme.surface,
           borderRadius: BorderRadius.circular(ExercisesTheme.chipRadius),
-          border: Border.all(
-            color: isActive
-                ? Colors.transparent
-                : ExercisesTheme.secondary.withValues(alpha: 0.3),
-            width: 1,
-          ),
+          boxShadow: isActive ? ExercisesTheme.glowShadow : null,
+          border: isActive
+              ? null
+              : Border.all(
+                  color: ExercisesTheme.surfaceHighlight,
+                  width: 1,
+                ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 16,
-                color: isActive ? Colors.white : ExercisesTheme.textSecondary,
-              ),
-              const SizedBox(width: 8),
-            ],
             Text(
               label,
-              style: TextStyle(
-                color: isActive ? Colors.white : ExercisesTheme.textSecondary,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                fontSize: 13,
+              style: ExercisesTheme.chipLabel.copyWith(
+                color: isActive ? Colors.white : ExercisesTheme.textPrimary,
               ),
             ),
-            if (isActive) ...[
-              const SizedBox(width: 4),
-              const Icon(
-                Icons.close,
-                size: 14,
-                color: Colors.white,
-              )
-            ] else
-              const Icon(
-                Icons.arrow_drop_down,
+            if (hasDropdown) ...[
+              const SizedBox(width: 6),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
                 size: 18,
-                color: ExercisesTheme.textSecondary,
-              )
+                color: isActive ? Colors.white : ExercisesTheme.textSecondary,
+              ),
+            ],
           ],
         ),
       ),

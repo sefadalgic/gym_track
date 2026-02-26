@@ -63,13 +63,13 @@ class _ExerciseCardState extends State<ExerciseCard>
       builder: (context, child) => Transform.scale(
         scale: _scaleAnimation.value,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           decoration: BoxDecoration(
+            color: ExercisesTheme.surface,
             borderRadius: BorderRadius.circular(ExercisesTheme.cardRadius),
-            gradient: ExercisesTheme.cardGradient,
             boxShadow: _isPressed ? [] : ExercisesTheme.cardShadow,
             border: Border.all(
-              color: ExercisesTheme.surfaceHighlight,
+              color: ExercisesTheme.surfaceHighlight.withValues(alpha: 0.5),
               width: 1,
             ),
           ),
@@ -81,11 +81,11 @@ class _ExerciseCardState extends State<ExerciseCard>
               onTapCancel: _handleTapCancel,
               borderRadius: BorderRadius.circular(ExercisesTheme.cardRadius),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    // Illustration / Icon Placeholder
-                    _buildIcon(context),
+                    // Exercise Image
+                    _buildImage(),
                     const SizedBox(width: 16),
                     // Content
                     Expanded(
@@ -93,43 +93,47 @@ class _ExerciseCardState extends State<ExerciseCard>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Expanded(
                                 child: Text(
-                                  widget.exercise.name ?? 'Unknown Exercise',
+                                  widget.exercise.name ?? 'Unknown',
                                   style: ExercisesTheme.cardTitle,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               _buildDifficultyBadge(),
                             ],
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
                           Text(
-                            _getMuscleInfo(),
+                            '${_getMuscleInfo()} • ${widget.exercise.category ?? 'Exercise'}',
                             style: ExercisesTheme.cardSubtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              if (widget.exercise.equipment != null)
-                                _buildTag(
-                                  widget.exercise.equipment!.toUpperCase(),
-                                  ExercisesTheme.surfaceHighlight,
-                                  ExercisesTheme.textSecondary,
-                                ),
+                              const Icon(
+                                Icons.fitness_center_rounded,
+                                size: 14,
+                                color: ExercisesTheme.primary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                widget.exercise.equipment ?? 'Bodyweight',
+                                style: ExercisesTheme.caption,
+                              ),
                             ],
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: ExercisesTheme.secondary.withValues(alpha: 0.5),
-                    ),
+                    // Add Button
+                    _buildAddButton(),
                   ],
                 ),
               ),
@@ -140,19 +144,17 @@ class _ExerciseCardState extends State<ExerciseCard>
     );
   }
 
-  Widget _buildIcon(BuildContext context) {
+  Widget _buildImage() {
     return Container(
-      width: 56,
-      height: 56,
+      width: 80,
+      height: 80,
       decoration: BoxDecoration(
-        color: ExercisesTheme.surfaceHighlight,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Center(
-        child: Icon(
-          Icons.fitness_center_rounded,
-          color: ExercisesTheme.primary,
-          size: 24,
+        color: ExercisesTheme.background,
+        borderRadius: BorderRadius.circular(ExercisesTheme.imageRadius),
+        image: const DecorationImage(
+          image: NetworkImage(
+              'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=200&h=200&fit=crop'), // Placeholder image
+          fit: BoxFit.cover,
         ),
       ),
     );
@@ -160,49 +162,47 @@ class _ExerciseCardState extends State<ExerciseCard>
 
   Widget _buildDifficultyBadge() {
     Color color = ExercisesTheme.intermediate;
-    String text = 'INT';
+    String text = 'Intermediate';
 
     final level = widget.exercise.level?.toLowerCase() ?? '';
     if (level.contains('beginner')) {
       color = ExercisesTheme.beginner;
-      text = 'BEG';
+      text = 'Beginner';
     } else if (level.contains('advanced')) {
       color = ExercisesTheme.advanced;
-      text = 'ADV';
+      text = 'Advanced';
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Text(
         text,
         style: TextStyle(
           color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
   }
 
-  Widget _buildTag(String text, Color bg, Color textColor) {
+  Widget _buildAddButton() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      width: 36,
+      height: 36,
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(6),
+        color: ExercisesTheme.surfaceHighlight.withValues(alpha: 0.5),
+        shape: BoxShape.circle,
       ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-        ),
+      child: const Icon(
+        Icons.add,
+        color: Colors.white,
+        size: 20,
       ),
     );
   }
@@ -212,6 +212,6 @@ class _ExerciseCardState extends State<ExerciseCard>
         widget.exercise.primaryMuscles!.isEmpty) {
       return 'General';
     }
-    return widget.exercise.primaryMuscles!.map((m) => m.displayName).join(', ');
+    return widget.exercise.primaryMuscles!.first.displayName;
   }
 }
