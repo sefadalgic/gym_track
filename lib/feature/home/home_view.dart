@@ -36,6 +36,8 @@ class _HomeViewState extends State<HomeView> {
   int _totalSets = 0;
   bool _isLoadingStats = true;
   bool _isStartingWorkout = false;
+  // weekday (1=Mon..7=Sun) → has completed session
+  final Map<int, bool> _weekCompletedDays = {};
 
   @override
   void initState() {
@@ -129,12 +131,25 @@ class _HomeViewState extends State<HomeView> {
       final now = DateTime.now();
       final weekStart = now.subtract(Duration(days: now.weekday - 1));
       final sessions = <WorkoutSessionModel>[];
+      final completedDays = <int, bool>{};
 
       for (int i = 0; i < 7; i++) {
         final day = weekStart.add(Duration(days: i));
         final daySessions =
             await _firestoreService.getWorkoutSessionsForDate(day);
         sessions.addAll(daySessions);
+        // weekday 1..7
+        if (daySessions.any((s) => s.isCompleted)) {
+          completedDays[i + 1] = true;
+        }
+      }
+
+      // Also check Sunday (weekday 7 = index 0 in Sun-display)
+      final sunday = weekStart.subtract(const Duration(days: 1));
+      final sunSessions =
+          await _firestoreService.getWorkoutSessionsForDate(sunday);
+      if (sunSessions.any((s) => s.isCompleted)) {
+        completedDays[7] = true;
       }
 
       int volume = 0;
@@ -155,6 +170,9 @@ class _HomeViewState extends State<HomeView> {
 
       if (mounted) {
         setState(() {
+          _weekCompletedDays
+            ..clear()
+            ..addAll(completedDays);
           _totalVolume = volume;
           _completedSets = completed;
           _totalSets = total;
@@ -343,14 +361,94 @@ class _HomeViewState extends State<HomeView> {
                 day.month == now.month &&
                 day.year == now.year;
             final isPast = day.isBefore(DateTime(now.year, now.month, now.day));
-            return _buildWeekDay(labels[i], day.day, isToday, isPast);
+            // i=0 → Sun(7), i=1 → Mon(1) ... i=6 → Sat(6)
+            final planWeekday = i == 0 ? 7 : i;
+            final planDay = _weekdayToEnum(planWeekday);
+            final hasWorkout =
+                widget.activeWorkout?.exercises?.containsKey(planDay) ?? false;
+            final hasCompleted = _weekCompletedDays[planWeekday] ?? false;
+            return _buildWeekDay(
+              labels[i],
+              day.day,
+              isToday,
+              isPast,
+              hasWorkout: hasWorkout,
+              hasCompleted: hasCompleted,
+            );
           }),
         ),
       ],
     );
   }
 
-  Widget _buildWeekDay(String label, int dayNum, bool isToday, bool isPast) {
+  Widget _buildWeekDay(
+    String label,
+    int dayNum,
+    bool isToday,
+    bool isPast, {
+    bool hasWorkout = false,
+    bool hasCompleted = false,
+  }) {
+    // Determine visual state
+    final Color bgColor;
+    final Color? borderColor;
+    final Widget child;
+
+    if (hasCompleted) {
+      // Tamamlandı — turuncu dolu + ✓
+      bgColor = AppTheme.primary;
+      borderColor = null;
+      child = const Icon(Icons.check_rounded, color: Colors.white, size: 18);
+    } else if (isToday) {
+      // Bugün — turuncu kenarlı
+      bgColor = Colors.transparent;
+      borderColor = AppTheme.primary;
+      child = Text(
+        '$dayNum',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.primary,
+        ),
+      );
+    } else if (isPast && hasWorkout && !hasCompleted) {
+      // Kaçırıldı — soluk
+      bgColor = surfaceHighlight;
+      borderColor = null;
+      child = Text(
+        '$dayNum',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: textSecondary.withValues(alpha: 0.4),
+        ),
+      );
+    } else if (hasWorkout) {
+      // Planlandı (gelecek) — normal
+      bgColor = surfaceHighlight;
+      borderColor = null;
+      child = Text(
+        '$dayNum',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: textSecondary,
+        ),
+      );
+    } else {
+      // Dinlenme günü — çok soluk
+      bgColor = surfaceHighlight.withValues(alpha: 0.4);
+      borderColor = null;
+      child = Text(
+        '$dayNum',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: textSecondary.withValues(alpha: 0.3),
+        ),
+      );
+    }
+
     return Column(
       children: [
         Text(
@@ -358,7 +456,9 @@ class _HomeViewState extends State<HomeView> {
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: textSecondary,
+            color: hasWorkout
+                ? textSecondary
+                : textSecondary.withValues(alpha: 0.4),
           ),
         ),
         const SizedBox(height: 8),
@@ -367,26 +467,12 @@ class _HomeViewState extends State<HomeView> {
           height: 38,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isPast
-                ? AppTheme.primary
-                : isToday
-                    ? Colors.transparent
-                    : surfaceHighlight,
-            border:
-                isToday ? Border.all(color: AppTheme.primary, width: 2) : null,
+            color: bgColor,
+            border: borderColor != null
+                ? Border.all(color: borderColor, width: 2)
+                : null,
           ),
-          child: Center(
-            child: isPast
-                ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
-                : Text(
-                    '$dayNum',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: isToday ? AppTheme.primary : textSecondary,
-                    ),
-                  ),
-          ),
+          child: Center(child: child),
         ),
       ],
     );
