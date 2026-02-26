@@ -203,6 +203,104 @@ class _HomeViewState extends State<HomeView> {
     return 'Athlete';
   }
 
+  // ── Shimmer helpers ───────────────────────────────────────────────────────
+  Widget _shimmerBox({
+    double width = double.infinity,
+    double height = 16,
+    double radius = 8,
+  }) {
+    return _ShimmerBox(
+      width: width,
+      height: height,
+      radius: radius,
+      baseColor: surfaceHighlight,
+      highlightColor: const Color(0xFF2A3148),
+    );
+  }
+
+  Widget _buildTodaysFocusShimmer() {
+    return Container(
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: surfaceHighlight),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: _shimmerBox(height: 22, radius: 6)),
+              const SizedBox(width: 12),
+              _shimmerBox(width: 70, height: 22, radius: 20),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _shimmerBox(width: 140, height: 13, radius: 6),
+          const SizedBox(height: 16),
+          _shimmerBox(height: 52, radius: 10),
+          const SizedBox(height: 8),
+          _shimmerBox(height: 52, radius: 10),
+          const SizedBox(height: 8),
+          _shimmerBox(height: 52, radius: 10),
+          const SizedBox(height: 14),
+          _shimmerBox(height: 50, radius: 12),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPerformanceShimmer() {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: surfaceHighlight),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _shimmerBox(width: 100, height: 11, radius: 4),
+                const SizedBox(height: 12),
+                _shimmerBox(width: 80, height: 28, radius: 6),
+                const SizedBox(height: 8),
+                _shimmerBox(width: 110, height: 11, radius: 4),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: surfaceHighlight),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _shimmerBox(width: 100, height: 11, radius: 4),
+                const SizedBox(height: 12),
+                _shimmerBox(width: 60, height: 28, radius: 6),
+                const SizedBox(height: 8),
+                _shimmerBox(height: 4, radius: 4),
+                const SizedBox(height: 6),
+                _shimmerBox(width: 60, height: 11, radius: 4),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -510,16 +608,19 @@ class _HomeViewState extends State<HomeView> {
           ],
         ),
         const SizedBox(height: 14),
-        Container(
-          decoration: BoxDecoration(
-            color: surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: surfaceHighlight),
+        if (_isLoadingStats)
+          _buildTodaysFocusShimmer()
+        else
+          Container(
+            decoration: BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: surfaceHighlight),
+            ),
+            child: workout == null
+                ? _buildNoWorkoutContent()
+                : _buildWorkoutContent(workout),
           ),
-          child: workout == null
-              ? _buildNoWorkoutContent()
-              : _buildWorkoutContent(workout),
-        ),
       ],
     );
   }
@@ -724,35 +825,38 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
         const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.fitness_center_rounded,
-                iconColor: AppTheme.primary,
-                label: 'TOTAL VOLUME',
-                value: _isLoadingStats
-                    ? '...'
-                    : '${_formatVolume(_totalVolume)} kg',
-                sub: '↑ This week',
-                subColor: const Color(0xFF4CAF50),
+        if (_isLoadingStats)
+          _buildPerformanceShimmer()
+        else
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  icon: Icons.fitness_center_rounded,
+                  iconColor: AppTheme.primary,
+                  label: 'TOTAL VOLUME',
+                  value: _isLoadingStats
+                      ? '...'
+                      : '${_formatVolume(_totalVolume)} kg',
+                  sub: '↑ This week',
+                  subColor: const Color(0xFF4CAF50),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.layers_rounded,
-                iconColor: AppTheme.secondary,
-                label: 'SETS FINISHED',
-                value: _isLoadingStats ? '...' : '$_completedSets',
-                sub: '/ ${_totalSets == 0 ? '—' : _totalSets}',
-                subColor: textSecondary,
-                showProgress: _totalSets > 0,
-                progress: _totalSets > 0 ? _completedSets / _totalSets : 0.0,
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard(
+                  icon: Icons.layers_rounded,
+                  iconColor: AppTheme.secondary,
+                  label: 'SETS FINISHED',
+                  value: _isLoadingStats ? '...' : '$_completedSets',
+                  sub: '/ ${_totalSets == 0 ? '—' : _totalSets}',
+                  subColor: textSecondary,
+                  showProgress: _totalSets > 0,
+                  progress: _totalSets > 0 ? _completedSets / _totalSets : 0.0,
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
       ],
     );
   }
@@ -867,4 +971,74 @@ class _HomeViewState extends State<HomeView> {
   }
 
   String _formatShortDate(DateTime date) => '${date.day}';
+}
+
+/// Animated shimmer placeholder box
+class _ShimmerBox extends StatefulWidget {
+  final double width;
+  final double height;
+  final double radius;
+  final Color baseColor;
+  final Color highlightColor;
+
+  const _ShimmerBox({
+    required this.width,
+    required this.height,
+    required this.radius,
+    required this.baseColor,
+    required this.highlightColor,
+  });
+
+  @override
+  State<_ShimmerBox> createState() => _ShimmerBoxState();
+}
+
+class _ShimmerBoxState extends State<_ShimmerBox>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+    _animation = Tween<double>(begin: -1.5, end: 1.5).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, _) {
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.radius),
+            gradient: LinearGradient(
+              begin: Alignment(_animation.value - 1, 0),
+              end: Alignment(_animation.value, 0),
+              colors: [
+                widget.baseColor,
+                widget.highlightColor,
+                widget.baseColor,
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
