@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:gym_track/core/thene/app_theme.dart';
 import 'package:gym_track/product/model/workout_session_model.dart';
@@ -5,7 +6,7 @@ import 'package:gym_track/product/model/workout_session_exercise_model.dart';
 import 'package:gym_track/product/model/exercise_set_model.dart';
 import 'package:gym_track/product/service/firestore_service.dart';
 
-/// Screen for tracking an active workout session
+/// Workout session tracking screen
 class WorkoutSessionScreen extends StatefulWidget {
   final String sessionId;
   final WorkoutSessionModel session;
@@ -23,20 +24,38 @@ class WorkoutSessionScreen extends StatefulWidget {
 class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
   late WorkoutSessionModel _session;
   final FirestoreService _firestoreService = FirestoreService.instance;
-  bool _isSaving = false;
 
-  // Colors — use app theme
+  // Colors
   static const Color background = Color(0xFF0A0E14);
-  static const Color surface = Color(0xFF151A21);
-  static const Color surfaceHighlight = Color(0xFF1E252E);
-  static Color get primary => AppTheme.primary;
+  static const Color surface = Color(0xFF13182A);
+  static const Color surfaceHighlight = Color(0xFF1E2640);
   static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFF8A8F98);
+  static const Color textSecondary = Color(0xFF5A6480);
+  static Color get primary => AppTheme.primary;
+
+  // Rest timer
+  int _restSeconds = 0;
+  Timer? _restTimer;
+  bool _restActive = false;
+
+  // Track which exercise is currently focused (for progress)
+  int get _currentExerciseIndex {
+    for (int i = 0; i < _session.exercises.length; i++) {
+      if (!_session.exercises[i].isFullyCompleted) return i;
+    }
+    return _session.exercises.length - 1;
+  }
 
   @override
   void initState() {
     super.initState();
     _session = widget.session;
+  }
+
+  @override
+  void dispose() {
+    _restTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -48,46 +67,16 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
       },
       child: Scaffold(
         backgroundColor: background,
-        appBar: AppBar(
-          backgroundColor: surface,
-          elevation: 0,
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _session.workoutName,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: textPrimary,
-                ),
-              ),
-              Text(
-                _formatDuration(_session.duration ?? Duration.zero),
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: textSecondary,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            IconButton(
-              icon: Icon(Icons.save, color: primary),
-              onPressed: _saveSession,
-            ),
-          ],
-        ),
+        appBar: _buildAppBar(),
         body: Column(
           children: [
-            _buildProgressHeader(),
+            _buildSessionProgress(),
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                 itemCount: _session.exercises.length,
-                itemBuilder: (context, index) {
-                  return _buildExerciseCard(_session.exercises[index], index);
-                },
+                itemBuilder: (context, index) =>
+                    _buildExerciseSection(_session.exercises[index], index),
               ),
             ),
           ],
@@ -97,61 +86,83 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
     );
   }
 
-  /// Progress header showing completion status
-  Widget _buildProgressHeader() {
-    final percentage = _session.completionPercentage;
-    final completedSets = _session.totalCompletedSets;
-    final totalSets = _session.totalPlannedSets;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF151A21), Color(0xFF12161C)],
-        ),
-        border: Border(
-          bottom: BorderSide(color: surfaceHighlight),
+  // ── AppBar ─────────────────────────────────────────────────────────────────
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: background,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: textPrimary),
+        onPressed: () async {
+          await _saveToFirestore();
+          if (mounted) Navigator.pop(context);
+        },
+      ),
+      title: Text(
+        _session.workoutName,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: textPrimary,
         ),
       ),
+      actions: [
+        IconButton(
+          icon: Icon(Icons.history_rounded, color: textSecondary),
+          onPressed: () {},
+        ),
+        IconButton(
+          icon: Icon(Icons.more_vert, color: textSecondary),
+          onPressed: () {},
+        ),
+      ],
+    );
+  }
+
+  // ── Session Progress ───────────────────────────────────────────────────────
+  Widget _buildSessionProgress() {
+    final completed =
+        _session.exercises.where((e) => e.isFullyCompleted).length;
+    final total = _session.exercises.length;
+    final progress = total > 0 ? completed / total : 0.0;
+    final currentIdx = _currentExerciseIndex + 1;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'İlerleme',
-                style: const TextStyle(
-                  fontSize: 16,
+              const Text(
+                'SESSION PROGRESS',
+                style: TextStyle(
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: textPrimary,
+                  color: textSecondary,
+                  letterSpacing: 1.2,
                 ),
               ),
               Text(
-                '$completedSets / $totalSets set',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: textSecondary,
+                '$currentIdx of $total exercises',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: primary,
+                  letterSpacing: 0.5,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: percentage / 100,
-              minHeight: 8,
+              value: progress,
+              minHeight: 5,
               backgroundColor: surfaceHighlight,
               valueColor: AlwaysStoppedAnimation<Color>(primary),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${percentage.toStringAsFixed(0)}% Tamamlandı',
-            style: TextStyle(
-              fontSize: 13,
-              color: primary,
-              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -159,122 +170,94 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
     );
   }
 
-  /// Exercise card with sets
-  Widget _buildExerciseCard(
+  // ── Exercise Section ───────────────────────────────────────────────────────
+  Widget _buildExerciseSection(
       WorkoutSessionExerciseModel exercise, int exerciseIndex) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF151A21), Color(0xFF12161C)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: surfaceHighlight),
-      ),
-      child: Theme(
-        data: ThemeData(
-          dividerColor: Colors.transparent,
-          splashColor: primary.withValues(alpha: 0.1),
-          highlightColor: primary.withValues(alpha: 0.05),
-        ),
-        child: ExpansionTile(
-          initiallyExpanded: true,
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          childrenPadding: const EdgeInsets.all(16),
-          leading: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: primary.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: primary.withValues(alpha: 0.3),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Exercise name row with RPE badge
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  exercise.exerciseName,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: primary,
+                  ),
+                ),
               ),
-            ),
-            child: Icon(
-              Icons.fitness_center,
-              color: primary,
-              size: 20,
-            ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: primary.withValues(alpha: 0.4)),
+                ),
+                child: Text(
+                  'RPE ${exercise.plannedSets + 5}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: primary,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
           ),
-          title: Text(
-            exercise.exerciseName,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: textPrimary,
-            ),
-          ),
-          subtitle: Text(
-            'Hedef: ${exercise.plannedSets}×${exercise.plannedReps}',
-            style: const TextStyle(
-              fontSize: 13,
-              color: textSecondary,
-            ),
-          ),
-          trailing: CircularProgressIndicator(
-            value: exercise.completionPercentage / 100,
-            backgroundColor: surfaceHighlight,
-            valueColor: AlwaysStoppedAnimation<Color>(primary),
-            strokeWidth: 3,
-          ),
-          children: [
-            _buildSetsSection(exercise, exerciseIndex),
-            const SizedBox(height: 12),
-            _buildAddSetButton(exercise, exerciseIndex),
-          ],
-        ),
+          const SizedBox(height: 12),
+          // Column headers
+          _buildColumnHeaders(),
+          const SizedBox(height: 8),
+          // Sets
+          ...exercise.completedSets.asMap().entries.map((entry) {
+            return _buildSetRow(
+                exercise, exerciseIndex, entry.value, entry.key);
+          }),
+          const SizedBox(height: 8),
+          // Add Set button
+          _buildAddSetButton(exerciseIndex),
+        ],
       ),
     );
   }
 
-  /// Sets section for an exercise
-  Widget _buildSetsSection(
-      WorkoutSessionExerciseModel exercise, int exerciseIndex) {
-    return Column(
+  Widget _buildColumnHeaders() {
+    return Row(
       children: [
-        // Header row
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            children: [
-              const SizedBox(width: 40),
-              const Expanded(
-                child: Text(
-                  'Kilo (kg)',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const Expanded(
-                child: Text(
-                  'Tekrar',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(width: 48),
-            ],
-          ),
-        ),
-        // Sets
-        ...exercise.completedSets.asMap().entries.map((entry) {
-          final setIndex = entry.key;
-          final set = entry.value;
-          return _buildSetRow(exercise, exerciseIndex, set, setIndex);
-        }),
+        _headerCell('SET', width: 36),
+        _headerCell('PREVIOUS', flex: 2),
+        _headerCell('WEIGHT (KG)', flex: 2),
+        _headerCell('REPS', flex: 2),
+        const SizedBox(width: 36),
       ],
     );
   }
 
-  /// Individual set row with weight and reps input
+  Widget _headerCell(String label, {double? width, int flex = 1}) {
+    final child = Text(
+      label,
+      style: TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.bold,
+        color: textSecondary,
+        letterSpacing: 0.8,
+      ),
+    );
+    if (width != null) {
+      return SizedBox(width: width, child: child);
+    }
+    return Expanded(flex: flex, child: child);
+  }
+
+  // ── Set Row ────────────────────────────────────────────────────────────────
   Widget _buildSetRow(
     WorkoutSessionExerciseModel exercise,
     int exerciseIndex,
@@ -286,195 +269,289 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
     final repsController =
         TextEditingController(text: set.reps?.toString() ?? '');
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color:
-            set.isCompleted ? primary.withValues(alpha: 0.1) : surfaceHighlight,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: set.isCompleted ? primary : surfaceHighlight,
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Set number
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: set.isCompleted ? primary : primary.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '${set.setNumber}',
-                style: TextStyle(
-                  color: set.isCompleted ? background : primary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
+          SizedBox(
+            width: 36,
+            child: Text(
+              '${set.setNumber}',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: set.isCompleted ? textSecondary : textPrimary,
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          // Previous (placeholder — italic, secondary)
+          Expanded(
+            flex: 2,
+            child: Text(
+              '${exercise.plannedSets * 10}kg×${exercise.plannedReps}',
+              style: TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: textSecondary,
+              ),
+            ),
+          ),
           // Weight input
           Expanded(
-            child: TextField(
-              controller: weightController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-              decoration: InputDecoration(
-                hintText: '0',
-                hintStyle: TextStyle(color: textSecondary),
-                filled: true,
-                fillColor: surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-              ),
-              onChanged: (value) {
-                _updateSet(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _buildInput(
+                controller: weightController,
+                hintText: '',
+                isCompleted: set.isCompleted,
+                isDecimal: true,
+                onChanged: (v) => _updateSet(
                   exerciseIndex,
                   setIndex,
-                  weight: double.tryParse(value),
-                );
-              },
-              onEditingComplete: () {
-                // Save to Firestore when leaving weight field
-                _saveToFirestore();
-              },
+                  weight: double.tryParse(v),
+                ),
+                onEditingComplete: _saveToFirestore,
+              ),
             ),
           ),
-          const SizedBox(width: 12),
           // Reps input
           Expanded(
-            child: TextField(
-              controller: repsController,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-              decoration: InputDecoration(
-                hintText: '0',
-                hintStyle: TextStyle(color: textSecondary),
-                filled: true,
-                fillColor: surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-              ),
-              onChanged: (value) {
-                _updateSet(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _buildInput(
+                controller: repsController,
+                hintText: '',
+                isCompleted: set.isCompleted,
+                isDecimal: false,
+                onChanged: (v) => _updateSet(
                   exerciseIndex,
                   setIndex,
-                  reps: int.tryParse(value),
-                );
-              },
-              onEditingComplete: () {
-                // Save to Firestore when leaving reps field
-                _saveToFirestore();
-              },
+                  reps: int.tryParse(v),
+                ),
+                onEditingComplete: _saveToFirestore,
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          // Checkbox
-          Checkbox(
-            value: set.isCompleted,
-            activeColor: primary,
-            checkColor: background,
-            onChanged: (value) {
+          // Completion toggle
+          GestureDetector(
+            onTap: () {
               _updateSet(
                 exerciseIndex,
                 setIndex,
-                isCompleted: value ?? false,
-                saveImmediately: true, // Always save when marking complete
+                isCompleted: !set.isCompleted,
+                saveImmediately: true,
               );
+              if (!set.isCompleted) _startRestTimer();
             },
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: set.isCompleted
+                    ? AppTheme.success.withValues(alpha: 0.15)
+                    : Colors.transparent,
+                border: Border.all(
+                  color: set.isCompleted ? AppTheme.success : textSecondary,
+                  width: 2,
+                ),
+              ),
+              child: set.isCompleted
+                  ? Icon(Icons.check_rounded, size: 16, color: AppTheme.success)
+                  : null,
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Add set button
-  Widget _buildAddSetButton(
-      WorkoutSessionExerciseModel exercise, int exerciseIndex) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: () => _addSet(exerciseIndex),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: primary,
-          side: BorderSide(color: primary.withValues(alpha: 0.5)),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+  Widget _buildInput({
+    required TextEditingController controller,
+    required String hintText,
+    required bool isCompleted,
+    required bool isDecimal,
+    required ValueChanged<String> onChanged,
+    required VoidCallback onEditingComplete,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: isDecimal
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : TextInputType.number,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        color: isCompleted ? textSecondary : textPrimary,
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+      ),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.5)),
+        filled: true,
+        fillColor: surfaceHighlight,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        isDense: true,
+      ),
+      onChanged: onChanged,
+      onEditingComplete: onEditingComplete,
+    );
+  }
+
+  Widget _buildAddSetButton(int exerciseIndex) {
+    return GestureDetector(
+      onTap: () => _addSet(exerciseIndex),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: textSecondary.withValues(alpha: 0.3),
+            style: BorderStyle.solid,
           ),
         ),
-        icon: const Icon(Icons.add),
-        label: const Text('Set Ekle'),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add, size: 16, color: textSecondary),
+            const SizedBox(width: 6),
+            Text(
+              'Add Set',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  /// Bottom bar with complete workout button
+  // ── Bottom Bar ─────────────────────────────────────────────────────────────
   Widget _buildBottomBar() {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: surface,
-        border: Border(
-          top: BorderSide(color: surfaceHighlight),
-        ),
-      ),
-      child: SafeArea(
-        child: SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton(
-            onPressed: _completeWorkout,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primary,
-              foregroundColor: background,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+      color: background,
+      child: Row(
+        children: [
+          // Rest timer
+          GestureDetector(
+            onTap: _toggleRestTimer,
+            child: Container(
+              width: 90,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: surfaceHighlight,
+                borderRadius: BorderRadius.circular(14),
               ),
-              elevation: 0,
-            ),
-            child: const Text(
-              'Antrenmayı Bitir',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.timer_rounded,
+                    color: _restActive ? primary : textSecondary,
+                    size: 18,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Rest',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    _formatRestTime(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _restActive ? primary : textSecondary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-        ),
+          const SizedBox(width: 12),
+          // Complete Workout button
+          Expanded(
+            child: SizedBox(
+              height: 56,
+              child: ElevatedButton.icon(
+                onPressed: _completeWorkout,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.celebration_rounded, size: 20),
+                label: const Text(
+                  'Complete Workout',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  /// Update a set and optionally save to Firestore immediately
+  // ── Rest Timer ─────────────────────────────────────────────────────────────
+  void _startRestTimer() {
+    _restTimer?.cancel();
+    setState(() {
+      _restSeconds = 90; // default 1:30
+      _restActive = true;
+    });
+    _restTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (_restSeconds <= 0) {
+        t.cancel();
+        if (mounted) setState(() => _restActive = false);
+      } else {
+        if (mounted) setState(() => _restSeconds--);
+      }
+    });
+  }
+
+  void _toggleRestTimer() {
+    if (_restActive) {
+      _restTimer?.cancel();
+      setState(() {
+        _restActive = false;
+        _restSeconds = 0;
+      });
+    } else {
+      _startRestTimer();
+    }
+  }
+
+  String _formatRestTime() {
+    if (_restSeconds <= 0) return '01:30';
+    final m = _restSeconds ~/ 60;
+    final s = _restSeconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  // ── Data Methods ───────────────────────────────────────────────────────────
   void _updateSet(
     int exerciseIndex,
     int setIndex, {
@@ -486,8 +563,7 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
     setState(() {
       final exercise = _session.exercises[exerciseIndex];
       final set = exercise.completedSets[setIndex];
-
-      final updatedSet = set.copyWith(
+      exercise.completedSets[setIndex] = set.copyWith(
         weight: weight ?? set.weight,
         reps: reps ?? set.reps,
         isCompleted: isCompleted ?? set.isCompleted,
@@ -495,102 +571,60 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
             ? DateTime.now()
             : set.timestamp,
       );
-
-      exercise.completedSets[setIndex] = updatedSet;
     });
-
-    // Save to Firestore when a set is marked complete or explicitly requested
     if (saveImmediately || isCompleted == true) {
       _saveToFirestore();
     }
   }
 
-  /// Add a new set to an exercise
   void _addSet(int exerciseIndex) {
     setState(() {
       final exercise = _session.exercises[exerciseIndex];
       final lastSet = exercise.lastCompletedSet;
-
-      final newSet = ExerciseSetModel(
+      exercise.completedSets.add(ExerciseSetModel(
         setNumber: exercise.completedSets.length + 1,
         weight: lastSet?.weight,
         reps: lastSet?.reps ?? exercise.plannedReps,
-      );
-
-      exercise.completedSets.add(newSet);
+      ));
     });
   }
 
-  /// Save session to Firestore (silent background save)
   Future<void> _saveToFirestore() async {
     try {
       await _firestoreService.updateWorkoutSession(widget.sessionId, _session);
     } catch (e) {
-      // Silent fail for background saves — user will see error on explicit save
       debugPrint('Background save failed: $e');
     }
   }
 
-  /// Save session to Firestore (explicit save with user feedback)
-  Future<void> _saveSession() async {
-    if (_isSaving) return;
-
-    setState(() {
-      _isSaving = true;
-    });
-
-    try {
-      await _firestoreService.updateWorkoutSession(widget.sessionId, _session);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Antrenman kaydedildi'),
-            backgroundColor: primary,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Kaydetme hatası: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      setState(() {
-        _isSaving = false;
-      });
-    }
-  }
-
-  /// Complete workout session
   Future<void> _completeWorkout() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
-          'Antrenmayı Bitir',
-          style: TextStyle(color: textPrimary),
+          'Complete Workout',
+          style: TextStyle(color: textPrimary, fontWeight: FontWeight.bold),
         ),
-        content: const Text(
-          'Antrenmayı tamamlamak istediğinizden emin misiniz?',
+        content: Text(
+          'Are you sure you want to finish this workout?',
           style: TextStyle(color: textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('İptal'),
+            child: Text('Cancel', style: TextStyle(color: textSecondary)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: primary,
-              foregroundColor: background,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Tamamla'),
+            child: const Text('Finish'),
           ),
         ],
       ),
@@ -603,7 +637,7 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Antrenman tamamlandı! 🎉'),
+              content: const Text('Workout completed! 🎉'),
               backgroundColor: primary,
             ),
           );
@@ -612,21 +646,12 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Hata: $e'),
+              content: Text('Error: $e'),
               backgroundColor: Colors.red,
             ),
           );
         }
       }
     }
-  }
-
-  String _formatDuration(Duration duration) {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
-    if (hours > 0) {
-      return '${hours}s ${minutes}dk';
-    }
-    return '${minutes}dk';
   }
 }
