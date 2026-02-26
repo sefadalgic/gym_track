@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gym_track/core/thene/app_theme.dart';
 import 'package:gym_track/product/model/workout_session_model.dart';
 import 'package:gym_track/product/model/workout_session_exercise_model.dart';
 import 'package:gym_track/product/model/exercise_set_model.dart';
@@ -24,11 +25,11 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
   final FirestoreService _firestoreService = FirestoreService.instance;
   bool _isSaving = false;
 
-  // Modern dark theme colors
+  // Colors — use app theme
   static const Color background = Color(0xFF0A0E14);
   static const Color surface = Color(0xFF151A21);
   static const Color surfaceHighlight = Color(0xFF1E252E);
-  static const Color primary = Color(0xFF00D9FF);
+  static Color get primary => AppTheme.primary;
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFF8A8F98);
 
@@ -42,7 +43,7 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        await _saveSession();
+        await _saveToFirestore();
         return true;
       },
       child: Scaffold(
@@ -72,7 +73,7 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.save, color: primary),
+              icon: Icon(Icons.save, color: primary),
               onPressed: _saveSession,
             ),
           ],

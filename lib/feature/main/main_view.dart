@@ -55,7 +55,7 @@ class _MainViewState extends State<MainView> {
   /// Get the list of pages for bottom navigation
   List<Widget> get _pages {
     return [
-      HomeView(),
+      HomeView(activeWorkout: _activeWorkout),
       _isLoadingWorkout
           ? const Center(
               child: CircularProgressIndicator(
