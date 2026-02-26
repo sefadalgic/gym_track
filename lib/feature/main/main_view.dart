@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:gym_track/feature/exercices/view/exercises_view.dart';
 import 'package:gym_track/feature/home/home_view.dart';
 import 'package:gym_track/feature/profile/view/profile_view.dart';
-import 'package:gym_track/feature/workouts/view/workouts_view.dart';
 import 'package:gym_track/feature/workouts/widgets/workout_calendar_view.dart';
 import 'package:gym_track/product/model/workout_model.dart';
 import 'package:gym_track/product/service/firestore_service.dart';
@@ -30,7 +29,13 @@ class _MainViewState extends State<MainView> {
   /// Load the active workout from Firestore
   Future<void> _loadActiveWorkout() async {
     try {
+      print('[MainView] Loading active workout...');
       final workout = await _firestoreService.getActiveWorkout();
+      print('[MainView] Active workout result: $workout');
+      if (workout != null) {
+        print(
+            '[MainView] Workout name: ${workout.name}, isActive: ${workout.isActive}, exercises: ${workout.exercises?.keys}');
+      }
       if (mounted) {
         setState(() {
           _activeWorkout = workout;
@@ -38,7 +43,7 @@ class _MainViewState extends State<MainView> {
         });
       }
     } catch (e) {
-      print('Error loading active workout: $e');
+      print('[MainView] Error loading active workout: $e');
       if (mounted) {
         setState(() {
           _isLoadingWorkout = false;

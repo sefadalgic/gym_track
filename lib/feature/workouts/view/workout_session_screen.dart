@@ -322,7 +322,8 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
           Expanded(
             child: TextField(
               controller: weightController,
-              keyboardType: TextInputType.number,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: textPrimary,
@@ -349,6 +350,10 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
                   setIndex,
                   weight: double.tryParse(value),
                 );
+              },
+              onEditingComplete: () {
+                // Save to Firestore when leaving weight field
+                _saveToFirestore();
               },
             ),
           ),
@@ -385,6 +390,10 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
                   reps: int.tryParse(value),
                 );
               },
+              onEditingComplete: () {
+                // Save to Firestore when leaving reps field
+                _saveToFirestore();
+              },
             ),
           ),
           const SizedBox(width: 12),
@@ -398,6 +407,7 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
                 exerciseIndex,
                 setIndex,
                 isCompleted: value ?? false,
+                saveImmediately: true, // Always save when marking complete
               );
             },
           ),
@@ -463,13 +473,14 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
     );
   }
 
-  /// Update a set
+  /// Update a set and optionally save to Firestore immediately
   void _updateSet(
     int exerciseIndex,
     int setIndex, {
     double? weight,
     int? reps,
     bool? isCompleted,
+    bool saveImmediately = false,
   }) {
     setState(() {
       final exercise = _session.exercises[exerciseIndex];
@@ -486,6 +497,11 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
 
       exercise.completedSets[setIndex] = updatedSet;
     });
+
+    // Save to Firestore when a set is marked complete or explicitly requested
+    if (saveImmediately || isCompleted == true) {
+      _saveToFirestore();
+    }
   }
 
   /// Add a new set to an exercise
@@ -504,7 +520,17 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
     });
   }
 
-  /// Save session to Firestore
+  /// Save session to Firestore (silent background save)
+  Future<void> _saveToFirestore() async {
+    try {
+      await _firestoreService.updateWorkoutSession(widget.sessionId, _session);
+    } catch (e) {
+      // Silent fail for background saves — user will see error on explicit save
+      debugPrint('Background save failed: $e');
+    }
+  }
+
+  /// Save session to Firestore (explicit save with user feedback)
   Future<void> _saveSession() async {
     if (_isSaving) return;
 

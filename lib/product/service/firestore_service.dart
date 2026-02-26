@@ -38,7 +38,7 @@ class FirestoreService {
   Future<CollectionReference?> _getUserWorkoutsCollection() async {
     final user = await AuthService.instance.getCurrentUser();
 
-    print('User: $user');
+    print('[FirestoreService] getCurrentUser result: $user, uid: ${user?.uid}');
     if (user == null) return null;
     return _firestore.collection('users').doc(user.uid).collection('workouts');
   }
@@ -85,20 +85,44 @@ class FirestoreService {
   /// Get the currently active workout
   Future<WorkoutModel?> getActiveWorkout() async {
     try {
+      print('[FirestoreService] getActiveWorkout called');
       final collection = await _getUserWorkoutsCollection();
 
-      if (collection == null) return null;
+      if (collection == null) {
+        print('[FirestoreService] collection is null - user not authenticated');
+        return null;
+      }
 
-      final QuerySnapshot snapshot =
+      print('[FirestoreService] collection path: ${collection.path}');
+
+      // First try to find a workout explicitly marked as active
+      final QuerySnapshot activeSnapshot =
           await collection.where('isActive', isEqualTo: true).limit(1).get();
 
-      if (snapshot.docs.isEmpty) return null;
+      print(
+          '[FirestoreService] activeSnapshot docs count: ${activeSnapshot.docs.length}');
 
-      final doc = snapshot.docs.first;
+      if (activeSnapshot.docs.isNotEmpty) {
+        final doc = activeSnapshot.docs.first;
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        print('[FirestoreService] Found active workout: ${data['name']}');
+        return WorkoutModel.fromJson(data);
+      }
+
+      // Fallback: return the first workout in the collection if no isActive field
+      final QuerySnapshot allSnapshot = await collection.limit(1).get();
+      print(
+          '[FirestoreService] allSnapshot docs count: ${allSnapshot.docs.length}');
+      if (allSnapshot.docs.isEmpty) return null;
+
+      final doc = allSnapshot.docs.first;
       final data = doc.data() as Map<String, dynamic>;
       data['id'] = doc.id;
+      print('[FirestoreService] Fallback workout: ${data['name']}');
       return WorkoutModel.fromJson(data);
     } catch (e) {
+      print('[FirestoreService] Exception in getActiveWorkout: $e');
       throw Exception('Failed to fetch active workout: $e');
     }
   }
@@ -317,6 +341,35 @@ class FirestoreService {
       }).toList();
     } catch (e) {
       throw Exception('Failed to fetch workout sessions for date: $e');
+    }
+  }
+
+  /// Get all workout sessions for a given month (for calendar indicators)
+  Future<Map<int, WorkoutSessionModel>> getSessionsForMonth(
+      DateTime month) async {
+    try {
+      final collection = await _getUserWorkoutSessionsCollection();
+      if (collection == null) return {};
+
+      final startOfMonth = DateTime(month.year, month.month, 1);
+      final endOfMonth = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
+
+      final QuerySnapshot snapshot = await collection
+          .where('date',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
+          .get();
+
+      final Map<int, WorkoutSessionModel> result = {};
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        final session = WorkoutSessionModel.fromJson(data);
+        result[session.date.day] = session;
+      }
+      return result;
+    } catch (e) {
+      return {};
     }
   }
 

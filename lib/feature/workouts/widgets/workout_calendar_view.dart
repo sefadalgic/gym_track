@@ -26,6 +26,9 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
   late DateTime _currentMonth;
   DateTime? _selectedDate;
 
+  // Month sessions map: day number → session for that day
+  Map<int, WorkoutSessionModel> _sessionsByDay = {};
+
   // Modern dark theme colors
   static const Color background = Color(0xFF0A0E14);
   static const Color surface = Color(0xFF151A21);
@@ -39,12 +42,26 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
     _currentMonth = DateTime.now();
     _selectedDate = DateTime.now();
     _checkActiveSession();
+    _loadMonthSessions();
   }
 
   // Firestore service
   final FirestoreService _firestoreService = FirestoreService.instance;
   WorkoutSessionModel? _activeSession;
   bool _isCheckingSession = false;
+
+  /// Load all sessions for the current month (for dot indicators)
+  Future<void> _loadMonthSessions() async {
+    try {
+      final sessions =
+          await _firestoreService.getSessionsForMonth(_currentMonth);
+      if (mounted) {
+        setState(() {
+          _sessionsByDay = sessions;
+        });
+      }
+    } catch (_) {}
+  }
 
   /// Check if there's an active session for the selected date
   Future<void> _checkActiveSession() async {
@@ -62,7 +79,6 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
         _isCheckingSession = false;
       });
     } catch (e) {
-      print('Error checking active session: $e');
       setState(() {
         _isCheckingSession = false;
       });
@@ -100,15 +116,16 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
       ),
       body: Container(
         color: background,
-        child: Column(
-          children: [
-            _buildCalendarHeader(),
-            _buildWeekdayLabels(),
-            Expanded(
-              child: _buildCalendarGrid(),
-            ),
-            // if (_selectedDate != null) _buildSelectedDayDetails(),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildCalendarHeader(),
+              _buildWeekdayLabels(),
+              _buildCalendarGrid(),
+              _buildSelectedDayDetails(),
+            ],
+          ),
         ),
       ),
     );
@@ -187,20 +204,20 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
     final daysInMonth = _getDaysInMonth(_currentMonth);
     final firstDayOfMonth =
         DateTime(_currentMonth.year, _currentMonth.month, 1);
-    final startingWeekday = firstDayOfMonth.weekday; // 1 = Monday, 7 = Sunday
+    final startingWeekday = firstDayOfMonth.weekday;
 
     return GridView.builder(
-      physics: NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(8),
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7,
-        childAspectRatio: 1,
+        childAspectRatio: 1.25,
         crossAxisSpacing: 4,
         mainAxisSpacing: 4,
       ),
       itemCount: daysInMonth + startingWeekday - 1,
       itemBuilder: (context, index) {
-        // Empty cells before the first day of the month
         if (index < startingWeekday - 1) {
           return const SizedBox.shrink();
         }
@@ -246,6 +263,25 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
       textColor = textSecondary.withValues(alpha: 0.4);
     }
 
+    // Determine dot indicator status
+    final session = _sessionsByDay[date.day];
+    final isInCurrentMonth = _isInCurrentMonth(date);
+    final isPast =
+        date.isBefore(DateTime.now().subtract(const Duration(days: 1)));
+
+    _DotStatus dotStatus = _DotStatus.none;
+    if (hasWorkout && isInCurrentMonth) {
+      if (session != null && session.isCompleted) {
+        dotStatus = _DotStatus.completed;
+      } else if (session != null && !session.isCompleted) {
+        dotStatus = _DotStatus.inProgress;
+      } else if (isPast) {
+        dotStatus = _DotStatus.missed;
+      } else {
+        dotStatus = _DotStatus.planned;
+      }
+    }
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -264,7 +300,6 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Day number
             Text(
               '$day',
               style: TextStyle(
@@ -273,23 +308,64 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
                 color: textColor,
               ),
             ),
-            const SizedBox(height: 6),
-            // Workout indicator - small dot
-            if (hasWorkout)
-              Container(
-                width: 5,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: AppTheme.primary,
-                  shape: BoxShape.circle,
-                ),
-              )
-            else
-              const SizedBox(height: 5),
+            const SizedBox(height: 4),
+            _buildDotIndicator(dotStatus),
           ],
         ),
       ),
     );
+  }
+
+  /// Dot indicator widget based on day status
+  Widget _buildDotIndicator(_DotStatus status) {
+    switch (status) {
+      case _DotStatus.completed:
+        // Filled success dot
+        return Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: AppTheme.success,
+            shape: BoxShape.circle,
+          ),
+        );
+      case _DotStatus.inProgress:
+        // Outlined primary dot (in-progress)
+        return Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: AppTheme.primary,
+              width: 1.5,
+            ),
+          ),
+        );
+      case _DotStatus.missed:
+        // Red dot for missed workout
+        return Container(
+          width: 5,
+          height: 5,
+          decoration: const BoxDecoration(
+            color: Color(0xFFFF6B6B),
+            shape: BoxShape.circle,
+          ),
+        );
+      case _DotStatus.planned:
+        // Filled primary dot for upcoming workout
+        return Container(
+          width: 5,
+          height: 5,
+          decoration: BoxDecoration(
+            color: AppTheme.primary,
+            shape: BoxShape.circle,
+          ),
+        );
+      case _DotStatus.none:
+        return const SizedBox(height: 6);
+    }
   }
 
   /// Selected day details panel
@@ -298,85 +374,113 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
 
     final exercises = _getExercisesForDate(_selectedDate!);
     final formattedDate = _formatFullDate(_selectedDate!);
+    final isCompleted = _activeSession != null && _activeSession!.isCompleted;
+    final hasActiveSession =
+        _activeSession != null && !_activeSession!.isCompleted;
 
     return Container(
-      constraints: const BoxConstraints(maxHeight: 300),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF151A21), Color(0xFF12161C)],
-        ),
+        color: surface,
         border: Border(
-          top: BorderSide(color: surfaceHighlight, width: 2),
+          top: BorderSide(color: surfaceHighlight, width: 1.5),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, -4),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Header
+          // ── Header ──────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             child: Row(
               children: [
-                // Green dot indicator
                 Container(
                   width: 8,
                   height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppTheme.primary,
+                  decoration: BoxDecoration(
+                    color: isCompleted
+                        ? AppTheme.success
+                        : exercises.isNotEmpty
+                            ? AppTheme.primary
+                            : textSecondary,
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     formattedDate,
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: textPrimary,
                     ),
                   ),
                 ),
-                // Completion badge
-                if (_activeSession != null && _activeSession!.isCompleted)
+                if (isCompleted)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.2),
+                      color: const Color(0xFF00FF88).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppTheme.success.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle_outline,
+                            size: 14, color: AppTheme.success),
+                        SizedBox(width: 4),
+                        Text(
+                          'Tamamlandı',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.success,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (exercises.isEmpty)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: surfaceHighlight,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Text(
-                      'Completed',
+                    child: Text(
+                      'Dinlenme günü',
                       style: TextStyle(
-                        fontSize: 13,
-                        color: AppTheme.primary,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: textSecondary,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
               ],
             ),
           ),
-          // Start Workout Button (only show if there are exercises)
-          if (exercises.isNotEmpty)
+
+          // ── Start / Continue button ──────────────────────────────────
+          if (exercises.isNotEmpty && !isCompleted)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: _isCheckingSession
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
                   : SizedBox(
                       width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
+                      height: 46,
+                      child: ElevatedButton.icon(
                         onPressed: () => _startOrContinueWorkout(exercises),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primary,
@@ -386,143 +490,128 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
                           ),
                           elevation: 0,
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _activeSession != null &&
-                                      !_activeSession!.isCompleted
-                                  ? Icons.play_arrow_rounded
-                                  : Icons.fitness_center_rounded,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _activeSession != null &&
-                                      !_activeSession!.isCompleted
-                                  ? 'Antrenmana Devam Et'
-                                  : 'Antrenmana Başla',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                        icon: Icon(
+                          hasActiveSession
+                              ? Icons.play_arrow_rounded
+                              : Icons.fitness_center_rounded,
+                          size: 20,
+                        ),
+                        label: Text(
+                          hasActiveSession
+                              ? 'Antrenmana Devam Et'
+                              : 'Antrenmana Başla',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
             ),
-          // Exercise list
-          Expanded(
-            child: exercises.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.event_busy_rounded,
-                            size: 48,
-                            color: textSecondary.withValues(alpha: 0.5),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Bu gün için antrenman yok',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
+
+          const SizedBox(height: 8),
+
+          // ── Exercise list (no inner scroll) ──────────────────────────
+          if (_isCheckingSession)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (exercises.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.self_improvement_rounded,
+                        size: 36, color: textSecondary.withValues(alpha: 0.4)),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Bu gün için antrenman planlanmamış',
+                      style: TextStyle(fontSize: 13, color: textSecondary),
                     ),
-                  )
-                : _activeSession != null && _activeSession!.isCompleted
-                    // Show completed session data
-                    ? _buildCompletedSessionList()
-                    // Show planned exercises
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        itemCount: exercises.length,
-                        itemBuilder: (context, index) {
-                          final exercise = exercises[index];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: surfaceHighlight,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: AppTheme.primary.withValues(alpha: 0.2),
-                              ),
+                  ],
+                ),
+              ),
+            )
+          else if (isCompleted)
+            _buildCompletedSessionList()
+          else
+            ListView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              itemCount: exercises.length,
+              itemBuilder: (context, index) {
+                final exercise = exercises[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: surfaceHighlight,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppTheme.primary.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${index + 1}',
+                            style: const TextStyle(
+                              color: AppTheme.primary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
                             ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    color:
-                                        AppTheme.primary.withValues(alpha: 0.2),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '${index + 1}',
-                                      style: const TextStyle(
-                                        color: AppTheme.primary,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    exercise.name ?? 'Bilinmeyen Egzersiz',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: textPrimary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        AppTheme.primary.withValues(alpha: 0.2),
-                                        AppTheme.primary.withValues(alpha: 0.1),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: AppTheme.primary
-                                          .withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    '${exercise.sets}×${exercise.reps}',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.primary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+                          ),
+                        ),
                       ),
-          ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          exercise.name ?? 'Bilinmeyen Egzersiz',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppTheme.primary.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          '${exercise.sets}×${exercise.reps}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -533,7 +622,9 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
     if (_activeSession == null) return const SizedBox.shrink();
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       itemCount: _activeSession!.exercises.length,
       itemBuilder: (context, index) {
         final exercise = _activeSession!.exercises[index];
@@ -560,15 +651,15 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00FF88).withValues(alpha: 0.15),
+                  color: AppTheme.success.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: const Color(0xFF00FF88).withValues(alpha: 0.3),
+                    color: AppTheme.success.withValues(alpha: 0.3),
                   ),
                 ),
                 child: const Icon(
                   Icons.check_circle,
-                  color: Color(0xFF00FF88),
+                  color: AppTheme.success,
                   size: 20,
                 ),
               ),
@@ -593,7 +684,7 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00FF88).withValues(alpha: 0.2),
+                  color: AppTheme.success.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -601,7 +692,7 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF00FF88),
+                    color: AppTheme.success,
                   ),
                 ),
               ),
@@ -655,10 +746,10 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
                     margin: const EdgeInsets.only(bottom: 6),
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF00FF88).withValues(alpha: 0.1),
+                      color: AppTheme.success.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: const Color(0xFF00FF88).withValues(alpha: 0.2),
+                        color: AppTheme.success.withValues(alpha: 0.2),
                       ),
                     ),
                     child: Row(
@@ -718,7 +809,7 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
                         const SizedBox(width: 12),
                         const Icon(
                           Icons.check_circle,
-                          color: Color(0xFF00FF88),
+                          color: AppTheme.success,
                           size: 20,
                         ),
                       ],
@@ -738,12 +829,14 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
     setState(() {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
     });
+    _loadMonthSessions();
   }
 
   void _nextMonth() {
     setState(() {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
     });
+    _loadMonthSessions();
   }
 
   int _getDaysInMonth(DateTime date) {
@@ -907,8 +1000,9 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
               ),
             ),
           ).then((_) {
-            // Refresh active session when returning
+            // Refresh active session + month indicators when returning
             _checkActiveSession();
+            _loadMonthSessions();
           });
         }
       }
@@ -923,4 +1017,13 @@ class _WorkoutCalendarViewState extends State<WorkoutCalendarView>
       }
     }
   }
+}
+
+/// Day status for calendar dot indicator
+enum _DotStatus {
+  none, // No workout scheduled
+  planned, // Workout scheduled, future/today
+  inProgress, // Session exists but not completed
+  completed, // Session completed
+  missed, // Workout scheduled, past day, no session
 }

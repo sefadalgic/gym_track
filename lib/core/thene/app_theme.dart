@@ -8,7 +8,7 @@ class AppTheme {
   static const Color cardBackground = Color(0xFF1A1A1A);
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFFB0B0B0);
-  static const Color success = Color(0xFF00D4AA);
+  static const Color success = Color(0xFF7B61FF);
   static const Color error = Color(0xFFFF6B6B);
 
   // Dark Theme
