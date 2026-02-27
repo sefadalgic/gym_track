@@ -4,4 +4,5 @@ class NavigationConstants {
   static const String home = '/home';
   static const String signup = '/signup';
   static const String main = '/main';
+  static const String personalInformation = '/personal-information';
 }

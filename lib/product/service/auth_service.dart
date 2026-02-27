@@ -8,6 +8,8 @@ class AuthService {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  User? get currentUser => _auth.currentUser;
+
   Future<User?> getCurrentUser() async {
     // If currentUser is already available, return immediately
     if (_auth.currentUser != null) return _auth.currentUser;
@@ -17,5 +19,9 @@ class AuthService {
           (user) => true,
           orElse: () => null,
         );
+  }
+
+  Future<void> signOut() async {
+    await _auth.signOut();
   }
 }

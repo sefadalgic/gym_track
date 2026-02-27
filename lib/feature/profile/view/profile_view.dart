@@ -1,4 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:gym_track/core/constants/navigation/navigation_constants.dart';
+import 'package:gym_track/product/service/auth_service.dart';
 
 /// Profile view - Matches design reference exactly
 class ProfileView extends StatefulWidget {
@@ -17,6 +21,7 @@ class _ProfileViewState extends State<ProfileView> {
   static const Color _textSecondary = Color(0xFF8A8F98);
 
   int _selectedStatIndex = 1; // "BESTS" selected by default
+  User? _currentUser;
 
   final List<Map<String, dynamic>> _stats = [
     {'icon': Icons.fitness_center, 'value': '124', 'label': 'WORKOUTS'},
@@ -46,6 +51,12 @@ class _ProfileViewState extends State<ProfileView> {
       'subtitle': 'Manage your visibility',
     },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUser = AuthService.instance.currentUser;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -114,11 +125,20 @@ class _ProfileViewState extends State<ProfileView> {
             CircleAvatar(
               radius: 50,
               backgroundColor: const Color(0xFF2A1A0A),
-              child: Icon(
-                Icons.person,
-                size: 52,
-                color: _orange.withValues(alpha: 0.7),
-              ),
+              child: _currentUser?.photoURL != null
+                  ? ClipOval(
+                      child: Image.network(
+                        _currentUser!.photoURL!,
+                        fit: BoxFit.cover,
+                        width: 100,
+                        height: 100,
+                      ),
+                    )
+                  : Icon(
+                      Icons.person,
+                      size: 52,
+                      color: _orange.withValues(alpha: 0.7),
+                    ),
             ),
             // Level badge
             Positioned(
@@ -159,9 +179,9 @@ class _ProfileViewState extends State<ProfileView> {
         ),
         const SizedBox(height: 16),
         // Name
-        const Text(
-          'Alex Johnson',
-          style: TextStyle(
+        Text(
+          _currentUser?.displayName ?? 'Username',
+          style: const TextStyle(
             color: _textPrimary,
             fontSize: 22,
             fontWeight: FontWeight.bold,
@@ -333,7 +353,11 @@ class _ProfileViewState extends State<ProfileView> {
           Icons.chevron_right,
           color: _textSecondary.withValues(alpha: 0.5),
         ),
-        onTap: () {},
+        onTap: () {
+          if (item['title'] == 'Personal Information') {
+            context.push(NavigationConstants.personalInformation);
+          }
+        },
       ),
     );
   }
@@ -393,7 +417,12 @@ class _ProfileViewState extends State<ProfileView> {
                 const Text('Cancel', style: TextStyle(color: _textSecondary)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () async {
+              await AuthService.instance.signOut();
+              if (context.mounted) {
+                context.go(NavigationConstants.login);
+              }
+            },
             child: const Text('Log Out', style: TextStyle(color: Colors.red)),
           ),
         ],

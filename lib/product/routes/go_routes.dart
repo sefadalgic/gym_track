@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gym_track/core/constants/navigation/navigation_constants.dart';
 import 'package:gym_track/feature/login/login_view.dart';
 import 'package:gym_track/feature/main/main_view.dart';
+import 'package:gym_track/feature/profile/view/personal_information_view.dart';
 import 'package:gym_track/feature/signup/signup_view.dart';
 import 'package:gym_track/feature/splash/view/splash_view.dart';
 
@@ -39,6 +40,12 @@ final goRouter = GoRouter(initialLocation: NavigationConstants.splash, routes: [
     path: NavigationConstants.signup,
     builder: (BuildContext context, GoRouterState state) {
       return const SignUpScreen();
+    },
+  ),
+  GoRoute(
+    path: NavigationConstants.personalInformation,
+    builder: (BuildContext context, GoRouterState state) {
+      return const PersonalInformationView();
     },
   ),
 ]);
