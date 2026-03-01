@@ -235,7 +235,7 @@ class _LoginViewState extends State<LoginView>
           ),
         );
 
-        context.push(NavigationConstants.main);
+        context.go(NavigationConstants.main);
       } on FirebaseAuthException catch (e) {
         debugPrint('ErrorCode on Firebase Login: ${e.code}');
         if (e.code == 'user-not-found') {

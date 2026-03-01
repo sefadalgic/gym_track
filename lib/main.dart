@@ -5,7 +5,6 @@ import 'package:gym_track/core/constants/app/app_constants.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:gym_track/core/constants/app/color_constants.dart';
 import 'package:gym_track/core/thene/app_theme.dart';
 import 'package:gym_track/firebase_options.dart';
 import 'package:gym_track/product/routes/go_routes.dart';

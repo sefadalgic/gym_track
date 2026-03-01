@@ -8,6 +8,7 @@ import 'package:gym_track/product/service/auth_service.dart';
 import 'package:gym_track/product/service/firestore_service.dart';
 import 'package:gym_track/feature/workouts/view/workout_session_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gym_track/feature/home/home_exercise_selection_screen.dart';
 
 /// Home / Dashboard view
 class HomeView extends StatefulWidget {
@@ -52,7 +53,9 @@ class _HomeViewState extends State<HomeView> {
   }
 
   /// Start or continue today's workout session
-  Future<void> _startWorkout() async {
+  Future<void> _startWorkout(
+      {Days? selectedDay,
+      List<WorkoutSessionExerciseModel>? customExercises}) async {
     final workout = widget.activeWorkout;
     if (workout == null || _isStartingWorkout) return;
 
@@ -62,7 +65,7 @@ class _HomeViewState extends State<HomeView> {
       final today = DateTime.now();
       final todayDate = DateTime(today.year, today.month, today.day);
 
-      // Check for existing session today
+      // Check for existing session today only if we haven't explicitly picked a different day or custom exercises
       final existingSessions =
           await _firestoreService.getWorkoutSessionsForDate(todayDate);
       final activeSession =
@@ -72,21 +75,30 @@ class _HomeViewState extends State<HomeView> {
 
       String sessionId;
 
-      if (activeSession != null) {
+      // If we have an active session AND no specific day or custom exercises were requested, reuse it.
+      if (activeSession != null &&
+          selectedDay == null &&
+          customExercises == null) {
         sessionId = activeSession.id!;
       } else {
-        // Build exercise list for today
-        final dayEnum = _weekdayToEnum(today.weekday);
-        final todayExercises = workout.exercises?[dayEnum] ?? [];
+        // Build exercise list
+        final List<WorkoutSessionExerciseModel> sessionExercises;
 
-        final sessionExercises = todayExercises.map((exercise) {
-          return WorkoutSessionExerciseModel(
-            exerciseId: exercise.exerciseId ?? '',
-            exerciseName: exercise.name ?? 'Unknown',
-            plannedSets: exercise.sets ?? 3,
-            plannedReps: exercise.reps ?? 10,
-          );
-        }).toList();
+        if (customExercises != null) {
+          sessionExercises = customExercises;
+        } else {
+          final dayEnum = selectedDay ?? _weekdayToEnum(today.weekday);
+          final exercisesToUse = workout.exercises?[dayEnum] ?? [];
+
+          sessionExercises = exercisesToUse.map((exercise) {
+            return WorkoutSessionExerciseModel(
+              exerciseId: exercise.exerciseId ?? '',
+              exerciseName: exercise.name ?? 'Unknown',
+              plannedSets: exercise.sets ?? 3,
+              plannedReps: exercise.reps ?? 10,
+            );
+          }).toList();
+        }
 
         final newSession = WorkoutSessionModel(
           workoutId: workout.id ?? '',
@@ -583,26 +595,15 @@ class _HomeViewState extends State<HomeView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        const Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              "Today's Focus",
+            Text(
+              "Bugünün Antrenmanı",
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: textPrimary,
-              ),
-            ),
-            GestureDetector(
-              onTap: () {},
-              child: Text(
-                'Edit Plan',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppTheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
               ),
             ),
           ],
@@ -634,13 +635,13 @@ class _HomeViewState extends State<HomeView> {
             Icon(Icons.fitness_center_rounded,
                 size: 40, color: textSecondary.withValues(alpha: 0.4)),
             const SizedBox(height: 12),
-            Text(
-              'No active workout plan',
+            const Text(
+              'Düzenli bir antrenman planın yok',
               style: TextStyle(fontSize: 14, color: textSecondary),
             ),
             const SizedBox(height: 8),
             Text(
-              'Create a plan to see your daily focus here.',
+              'Burada günlük hedeflerini görmek için bir plan oluştur.',
               textAlign: TextAlign.center,
               style: TextStyle(
                   fontSize: 12, color: textSecondary.withValues(alpha: 0.6)),
@@ -648,6 +649,246 @@ class _HomeViewState extends State<HomeView> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showAddWorkoutOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Antrenman Ekle',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: textPrimary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildOptionCard(
+                icon: Icons.list_alt_rounded,
+                title: 'Plandan Seç',
+                subtitle: 'Antrenman planındaki rutinlerden birini uygula',
+                onTap: () {
+                  Navigator.pop(context);
+                  _showWorkoutDaySelector();
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildOptionCard(
+                icon: Icons.edit_note_rounded,
+                title: 'Özel Antrenman',
+                subtitle: 'Egzersizleri manuel olarak seç',
+                onTap: () {
+                  Navigator.pop(context);
+                  _startManualWorkout();
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOptionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: surfaceHighlight,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: AppTheme.primary, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 13, color: textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: textSecondary, size: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _startManualWorkout() async {
+    final List<WorkoutSessionExerciseModel>? selectedExercises =
+        await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const HomeExerciseSelectionScreen(),
+      ),
+    );
+
+    if (selectedExercises != null && selectedExercises.isNotEmpty) {
+      _startWorkout(customExercises: selectedExercises);
+    }
+  }
+
+  void _showWorkoutDaySelector() {
+    final workout = widget.activeWorkout;
+    if (workout == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final days = workout.selectedDays;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Antrenman Günü Seç',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Bugün uygulamak istediğin antrenman rutinini seç.',
+                style: TextStyle(fontSize: 14, color: textSecondary),
+              ),
+              const SizedBox(height: 24),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: days.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final day = days[index];
+                    final exercises = workout.exercises?[day] ?? [];
+
+                    return InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _startWorkout(selectedDay: day);
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: surfaceHighlight,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: surfaceHighlight,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  day.name.substring(0, 1).toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    day.name.toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${exercises.length} Egzersiz',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.play_circle_fill_rounded,
+                              color: AppTheme.primary,
+                              size: 32,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -700,7 +941,7 @@ class _HomeViewState extends State<HomeView> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
           child: Text(
-            '${todayExercises.length} Exercises today',
+            'Bugün ${todayExercises.length} egzersiz planlandı',
             style: TextStyle(fontSize: 13, color: textSecondary),
           ),
         ),
@@ -708,55 +949,85 @@ class _HomeViewState extends State<HomeView> {
         if (todayExercises.isEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Text(
-              'Rest day — no exercises planned for today.',
-              style: TextStyle(fontSize: 13, color: textSecondary),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Bugün programında antrenman görünmüyor. Dinlenebilir veya yeni bir tane ekleyebilirsin.',
+                  style: TextStyle(fontSize: 13, color: textSecondary),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: _showAddWorkoutOptions,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon:
+                        const Icon(Icons.add_circle_outline_rounded, size: 22),
+                    label: const Text(
+                      'Antrenman Ekle',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           )
         else
           ...todayExercises.take(3).map((exercise) {
-            final name = exercise.name ?? 'Exercise';
+            final name = exercise.name ?? 'Egzersiz';
             final sets = exercise.sets ?? 3;
             final reps = exercise.reps ?? 10;
-            return _buildExerciseItem(name, '$sets Sets × $reps Reps');
+            return _buildExerciseItem(name, '$sets Set × $reps Tekrar');
           }),
         if (todayExercises.length > 3)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
             child: Text(
-              '+${todayExercises.length - 3} more exercises',
+              '+${todayExercises.length - 3} egzersiz daha',
               style: TextStyle(
                   fontSize: 12, color: AppTheme.primary.withValues(alpha: 0.7)),
             ),
           ),
         const SizedBox(height: 12),
         // Start Workout Button
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: _isStartingWorkout ? null : _startWorkout,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+        if (todayExercises.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: _isStartingWorkout ? null : _startWorkout,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
                 ),
-                elevation: 0,
-              ),
-              icon: const Icon(Icons.play_arrow_rounded, size: 22),
-              label: const Text(
-                'Start Workout',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                label: const Text(
+                  'Antrenmanı Başlat',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
       ],
     );
   }
@@ -969,8 +1240,6 @@ class _HomeViewState extends State<HomeView> {
     ];
     return months[month];
   }
-
-  String _formatShortDate(DateTime date) => '${date.day}';
 }
 
 /// Animated shimmer placeholder box
