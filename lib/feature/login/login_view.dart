@@ -15,6 +15,7 @@ import 'package:gym_track/feature/login/theme/login_theme.dart';
 import 'package:gym_track/feature/signup/signup_view.dart';
 import 'package:gym_track/product/widget/button/auth_social_login_button.dart';
 import 'package:gym_track/product/widget/text_field/auth_field.dart';
+import 'package:gym_track/product/utility/toast_manager.dart';
 import 'package:http/http.dart' as http;
 import 'package:ionicons/ionicons.dart';
 
@@ -224,43 +225,15 @@ class _LoginViewState extends State<LoginView>
                 email: _emailController.text,
                 password: _passwordController.text);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('welcome back ${credential.user?.displayName ?? ""}'),
-            backgroundColor: LoginTheme.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
+        ToastManager.showSuccess(
+          context,
+          'Hoş geldiniz ${credential.user?.displayName ?? ""}',
         );
 
         context.go(NavigationConstants.main);
       } on FirebaseAuthException catch (e) {
         debugPrint('ErrorCode on Firebase Login: ${e.code}');
-        if (e.code == 'user-not-found') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('No user found for that email.'),
-              backgroundColor: LoginTheme.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
-        } else if (e.code == 'wrong-password') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Wrong password provided for that user.'),
-              backgroundColor: LoginTheme.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
-        }
+        ToastManager.showFirebaseError(context, e);
       }
 
       setState(() => _isLoading = false);

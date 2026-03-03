@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gym_track/core/constants/image/image_constants.dart';
@@ -55,27 +56,40 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView>
     super.dispose();
   }
 
+  // TODO: Kayitli mail olmamasi durumunu kontrol et !
+
   void _handleResetPassword() {
     if (_formKey.currentState?.validate() ?? false) {
       setState(() => _isLoading = true);
 
-      // Simulate API call
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                  'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.'),
-              backgroundColor: LoginTheme.success,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+      final auth = FirebaseAuth.instance
+          .sendPasswordResetEmail(email: _emailController.text)
+          .then((value) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.'),
+            backgroundColor: LoginTheme.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-          );
-          context.pop();
-        }
+          ),
+        );
+        context.pop();
+      }).catchError((error) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.toString()),
+            backgroundColor: LoginTheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
       });
     }
   }

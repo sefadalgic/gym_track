@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
+import 'package:gym_track/core/constants/navigation/navigation_constants.dart';
 import 'package:gym_track/core/thene/app_theme.dart';
 import 'package:gym_track/product/widget/button/auth_social_login_button.dart';
 import 'package:gym_track/product/widget/text_field/auth_field.dart';
+import 'package:gym_track/product/utility/toast_manager.dart';
 import 'package:ionicons/ionicons.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -18,6 +22,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _acceptTerms = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -58,25 +63,40 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return null;
   }
 
-  void _handleSignUp() {
+  void _handleSignUp() async {
     if (_formKey.currentState!.validate()) {
       if (!_acceptTerms) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please accept the Terms of Service'),
-            backgroundColor: AppTheme.error,
-          ),
-        );
+        ToastManager.showError(context, 'Please accept the Terms of Service');
         return;
       }
 
-      // Sign up logic
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account created successfully!'),
-          backgroundColor: AppTheme.success,
-        ),
-      );
+      setState(() => _isLoading = true);
+
+      try {
+        final credential =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        if (mounted) {
+          await credential.user?.updateDisplayName(_nameController.text.trim());
+          ToastManager.showSuccess(context, 'Hesabınız başarıyla oluşturuldu!');
+          context.go(NavigationConstants.login);
+        }
+      } on FirebaseAuthException catch (e) {
+        if (mounted) {
+          ToastManager.showFirebaseError(context, e);
+        }
+      } catch (e) {
+        if (mounted) {
+          ToastManager.showError(context, 'Bir hata oluştu: $e');
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
     }
   }
 
@@ -278,7 +298,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ],
                   ),
                   child: ElevatedButton(
-                    onPressed: _handleSignUp,
+                    onPressed: _isLoading ? null : _handleSignUp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
@@ -286,25 +306,32 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Text(
-                          'Join the Elite',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                    child: _isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Text(
+                                'Join the Elite',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Icon(
+                                Icons.bolt,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                            ],
                           ),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(
-                          Icons.bolt,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ],
-                    ),
                   ),
                 ),
 
