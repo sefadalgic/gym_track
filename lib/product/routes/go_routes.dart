@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gym_track/core/constants/navigation/navigation_constants.dart';
+import 'package:gym_track/feature/login/forgot_password_view.dart';
 import 'package:gym_track/feature/login/login_view.dart';
 import 'package:gym_track/feature/main/main_view.dart';
 import 'package:gym_track/feature/profile/view/personal_information_view.dart';
@@ -46,6 +47,12 @@ final goRouter = GoRouter(initialLocation: NavigationConstants.splash, routes: [
     path: NavigationConstants.personalInformation,
     builder: (BuildContext context, GoRouterState state) {
       return const PersonalInformationView();
+    },
+  ),
+  GoRoute(
+    path: NavigationConstants.forgotPassword,
+    builder: (BuildContext context, GoRouterState state) {
+      return const ForgotPasswordView();
     },
   ),
 ]);

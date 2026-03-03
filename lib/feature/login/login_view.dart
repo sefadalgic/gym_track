@@ -494,7 +494,7 @@ class _LoginViewState extends State<LoginView>
       alignment: Alignment.centerRight,
       child: TextButton(
         onPressed: () {
-          // TODO: Implement forgot password
+          context.push(NavigationConstants.forgotPassword);
         },
         child: const Text(
           'Forgot Password?',

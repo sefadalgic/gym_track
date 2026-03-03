@@ -68,7 +68,7 @@ class LoginTheme {
 
   // Text Styles
   static const TextStyle title = TextStyle(
-    fontSize: 42,
+    fontSize: 32,
     fontWeight: FontWeight.bold,
     color: textPrimary,
     letterSpacing: -1.5,
