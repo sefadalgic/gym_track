@@ -5,6 +5,7 @@ import 'package:gym_track/feature/profile/view/profile_view.dart';
 import 'package:gym_track/feature/workouts/widgets/workout_calendar_view.dart';
 import 'package:gym_track/product/model/workout_model.dart';
 import 'package:gym_track/product/service/firestore_service.dart';
+import 'package:gym_track/feature/workouts/widgets/empty_workout_plan_view.dart';
 
 /// Main view with bottom navigation bar
 class MainView extends StatefulWidget {
@@ -64,19 +65,7 @@ class _MainViewState extends State<MainView> {
             )
           : _activeWorkout != null
               ? WorkoutCalendarView(workout: _activeWorkout!)
-              : const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24.0),
-                    child: Text(
-                      'No active workout plan.\nCreate one to get started!',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFF8A8F98),
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
+              : const EmptyWorkoutPlanView(),
       ExercisesView(),
       ProfileView(),
     ];

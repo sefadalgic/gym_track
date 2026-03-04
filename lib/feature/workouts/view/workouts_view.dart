@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gym_track/core/thene/app_theme.dart';
+import 'package:gym_track/feature/workouts/view/create_workout_flow.dart';
 
 class MonthlyProgressScreenV2 extends StatefulWidget {
   const MonthlyProgressScreenV2({super.key});
@@ -78,7 +79,13 @@ class _MonthlyProgressScreenV2State extends State<MonthlyProgressScreenV2> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Add workout
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const CreateWorkoutFlow(),
+              fullscreenDialog: true,
+            ),
+          );
         },
         backgroundColor: AppTheme.primary,
         elevation: 4,
@@ -389,37 +396,77 @@ class _MonthlyProgressScreenV2State extends State<MonthlyProgressScreenV2> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
           color: AppTheme.cardBackground,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: AppTheme.textSecondary.withOpacity(0.2),
+            color: AppTheme.primary.withValues(alpha: 0.1),
             width: 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primary.withValues(alpha: 0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Column(
           children: [
-            Icon(
-              Icons.fitness_center,
-              size: 48,
-              color: AppTheme.textSecondary.withOpacity(0.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No workout logged',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textSecondary,
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.fitness_center_rounded,
+                size: 48,
+                color: AppTheme.primary.withValues(alpha: 0.8),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 24),
+            const Text(
+              'Dinlenme Günü mü?',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
             Text(
-              'Tap the + button to log an activity',
+              'Bugün için planlanmış bir antrenman bulunamadı. Hemen yeni bir plan oluşturabilir veya kütüphaneden seçim yapabilirsin.',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: AppTheme.textSecondary.withOpacity(0.7),
+                color: AppTheme.textSecondary.withValues(alpha: 0.8),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CreateWorkoutFlow(),
+                    fullscreenDialog: true,
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: const Text('Yeni Plan Oluştur'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
